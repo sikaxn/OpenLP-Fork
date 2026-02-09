@@ -19,6 +19,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>. #
 ##########################################################################
 from unittest.mock import MagicMock
+import xml.etree.ElementTree as ElementTree
 
 from openlp.core.common.registry import Registry
 

@@ -22,7 +22,7 @@ import logging
 
 from flask import jsonify, request, abort, Blueprint
 
-from openlp.core.api.lib import login_required
+from openlp.core.api.lib import login_required, xml_response
 from openlp.core.common.registry import Registry
 from openlp.core.common.utils import is_uuid
 
@@ -34,6 +34,28 @@ log = logging.getLogger(__name__)
 @service_views.route('/items')
 def service_items():
     log.debug('service/v2/items')
+    return jsonify(_get_service_items_payload())
+
+
+@service_views.route('/items-xml')
+def service_items_xml():
+    """
+    Return service items as XML.
+
+    :return: XML representation of service items.
+    :rtype: flask.Response
+    """
+    log.debug('service/v2/items-xml')
+    return xml_response(_get_service_items_payload(), root_name='service_items')
+
+
+def _get_service_items_payload():
+    """
+    Build the service items payload.
+
+    :return: List containing serialised service items.
+    :rtype: list
+    """
     live_controller = Registry().get('live_controller')
     service_items = []
     if live_controller.service_item:
@@ -55,7 +77,7 @@ def service_items():
             'selected': (service_item.unique_identifier == current_unique_identifier),
             'is_valid': service_item.is_valid
         })
-    return jsonify(service_items)
+    return service_items
 
 
 @service_views.route('/show', methods=['POST'])

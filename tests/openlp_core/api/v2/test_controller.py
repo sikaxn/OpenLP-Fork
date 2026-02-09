@@ -20,6 +20,7 @@
 ##########################################################################
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+import xml.etree.ElementTree as ElementTree
 
 from flask.testing import FlaskClient
 
@@ -44,6 +45,65 @@ def test_retrieve_live_items(flask_client: FlaskClient, registry: Registry, sett
 
     # THEN: The correct item data should be returned
     assert res == {'slides': [{'selected': True}], 'id': '42'}
+
+
+def test_retrieve_live_items_xml(flask_client: FlaskClient, registry: Registry, settings: Settings):
+    """
+    Test the live-items-xml endpoint with a mocked service item.
+    """
+    # GIVEN: A mocked controller with a mocked service item
+    fake_live_controller = MagicMock()
+    fake_live_controller.service_item = MagicMock()
+    fake_live_controller.selected_row = 0
+    fake_live_controller.service_item.unique_identifier = 42
+    fake_live_controller.service_item.to_dict.return_value = {'slides': [{'selected': False}]}
+    Registry().register('live_controller', fake_live_controller)
+
+    # WHEN: The live-items-xml endpoint is called
+    res = flask_client.get('/api/v2/controller/live-items-xml')
+    xml_root = ElementTree.fromstring(res.data.decode('utf-8'))
+
+    # THEN: XML should include selected slide and id
+    assert res.status_code == 200
+    assert res.mimetype == 'application/xml'
+    assert xml_root.tag == 'live_item'
+    assert xml_root.find('./id').text == '42'
+    assert xml_root.find('./slides/item/selected').text == 'true'
+
+
+def test_retrieve_current_live_line(flask_client: FlaskClient, registry: Registry, settings: Settings):
+    """
+    Test the current-live-line endpoint with a mocked service item.
+    """
+    fake_live_controller = MagicMock()
+    fake_live_controller.service_item = MagicMock()
+    fake_live_controller.selected_row = 1
+    fake_live_controller.service_item.to_dict.return_value = {
+        'slides': [{'text': 'Verse 2'}]
+    }
+    Registry().register('live_controller', fake_live_controller)
+
+    res = flask_client.get('/api/v2/controller/current-live-line')
+
+    assert res.status_code == 200
+    assert res.mimetype == 'text/plain'
+    assert res.get_data(as_text=True) == 'Verse 2'
+    fake_live_controller.service_item.to_dict.assert_called_once_with(True, 1)
+
+
+def test_retrieve_current_live_line_without_live_item(flask_client: FlaskClient, registry: Registry, settings: Settings):
+    """
+    Test the current-live-line endpoint when no live item exists.
+    """
+    fake_live_controller = MagicMock()
+    fake_live_controller.service_item = None
+    Registry().register('live_controller', fake_live_controller)
+
+    res = flask_client.get('/api/v2/controller/current-live-line')
+
+    assert res.status_code == 200
+    assert res.mimetype == 'text/plain'
+    assert res.get_data(as_text=True) == ''
 
 
 def test_controller_set_requires_login(flask_client: FlaskClient, registry: Registry, settings: Settings):

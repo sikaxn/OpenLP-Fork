@@ -26,7 +26,7 @@ import logging
 
 from flask import jsonify, request, abort, Blueprint, Response
 
-from openlp.core.api.lib import login_required
+from openlp.core.api.lib import login_required, xml_response
 from openlp.core.common import ThemeLevel
 from openlp.core.common.json import OpenLPJSONEncoder
 from openlp.core.common.registry import Registry
@@ -46,6 +46,32 @@ def controller_live_items():
     :rtype: flask.Response
     """
     log.debug('controller-v2-live-items')
+    live_item = _get_live_item_with_all_slides()
+    json_live_item = json.dumps(live_item, cls=OpenLPJSONEncoder)
+    return Response(json_live_item, mimetype='application/json')
+
+
+@controller_views.route('/live-items-xml')
+def controller_live_items_xml():
+    """
+    This endpoint returns the current live service item with all slides as XML,
+    marking the currently selected slide.
+
+    :return: XML representation of the current live service item.
+    :rtype: flask.Response
+    """
+    log.debug('controller-v2-live-items-xml')
+    live_item = _get_live_item_with_all_slides()
+    return xml_response(live_item, root_name='live_item')
+
+
+def _get_live_item_with_all_slides():
+    """
+    Build the live item payload with all slides and selected slide metadata.
+
+    :return: A dictionary representation of the live service item.
+    :rtype: dict
+    """
     live_controller = Registry().get('live_controller')
     current_item = live_controller.service_item
     live_item = {}
@@ -53,8 +79,7 @@ def controller_live_items():
         live_item = current_item.to_dict()
         live_item['slides'][live_controller.selected_row]['selected'] = True
         live_item['id'] = str(current_item.unique_identifier)
-    json_live_item = json.dumps(live_item, cls=OpenLPJSONEncoder)
-    return Response(json_live_item, mimetype='application/json')
+    return live_item
 
 
 @controller_views.route('/live-item')
@@ -75,6 +100,38 @@ def controller_live_item():
         live_item['id'] = str(current_item.unique_identifier)
     json_live_item = json.dumps(live_item, cls=OpenLPJSONEncoder)
     return Response(json_live_item, mimetype='application/json')
+
+
+@controller_views.route('/current-live-line')
+def controller_current_live_line():
+    """
+    Return the current live slide text as plain text.
+
+    :return: The text of the currently selected live slide.
+    :rtype: flask.Response
+    """
+    log.debug('controller-v2-current-live-line')
+    return Response(_get_current_live_line(), mimetype='text/plain')
+
+
+def _get_current_live_line():
+    """
+    Get the text for the currently selected live slide.
+
+    :return: Current live slide text, or an empty string if unavailable.
+    :rtype: str
+    """
+    live_controller = Registry().get('live_controller')
+    current_item = live_controller.service_item
+    if not current_item:
+        return ''
+    selected_row = live_controller.selected_row or 0
+    live_item = current_item.to_dict(True, selected_row)
+    slides = live_item.get('slides', [])
+    if not slides:
+        return ''
+    slide = slides[0]
+    return str(slide.get('text', ''))
 
 
 @controller_views.route('/show', methods=['POST'])

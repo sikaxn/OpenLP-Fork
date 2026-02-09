@@ -22,7 +22,9 @@ The OpenLP API library.
 """
 
 from functools import wraps
-from flask import request
+import xml.etree.ElementTree as ElementTree
+
+from flask import Response, request
 from openlp.core.common.registry import Registry
 
 
@@ -44,3 +46,48 @@ def login_required(f):
             return f(*args, **kwargs)
         return '', 401
     return decorated
+
+
+def _serialise_xml_value(parent, value, element_name='item'):
+    """
+    Serialise a Python value into XML child elements under ``parent``.
+
+    :param parent: The parent XML element.
+    :type parent: xml.etree.ElementTree.Element
+    :param value: The value to serialise.
+    :type value: Any
+    :param element_name: Element name used for list items.
+    :type element_name: str
+    """
+    if isinstance(value, dict):
+        for key, child_value in value.items():
+            child = ElementTree.SubElement(parent, str(key))
+            _serialise_xml_value(child, child_value, element_name='item')
+    elif isinstance(value, list):
+        for list_value in value:
+            child = ElementTree.SubElement(parent, element_name)
+            _serialise_xml_value(child, list_value, element_name='item')
+    elif isinstance(value, bool):
+        parent.text = str(value).lower()
+    elif value is None:
+        parent.text = ''
+    else:
+        parent.text = str(value)
+
+
+def xml_response(data, root_name='response'):
+    """
+    Convert Python data to XML and return it as a Flask response.
+
+    :param data: The data to serialise.
+    :type data: Any
+    :param root_name: The name for the root XML element.
+    :type root_name: str
+    :return: XML flask response.
+    :rtype: flask.Response
+    """
+    root = ElementTree.Element(root_name)
+    _serialise_xml_value(root, data)
+    xml_string = ElementTree.tostring(root, encoding='unicode')
+    xml_payload = '<?xml version="1.0" encoding="UTF-8"?>\n{xml}'.format(xml=xml_string)
+    return Response(xml_payload, mimetype='application/xml')
