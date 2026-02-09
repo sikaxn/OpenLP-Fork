@@ -1,0 +1,21 @@
+Test Song
+
+
+Verse 1
+Line One Verse One
+Line Two Verse One
+Line Three Verse One
+Line Four Verse One
+
+
+Verse 2
+Line One Verse Two
+Line Two Verse Two
+Line Three Verse Two
+Line Four Verse Two
+
+Author One, Author Two
+CCLI Song #123456
+© 2023 OpenLP Music
+For use solely with the OpenLP Song Test Suite.  All rights reserved. http://openlp.org
+CCLI License #00000

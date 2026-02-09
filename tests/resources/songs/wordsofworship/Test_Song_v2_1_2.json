@@ -1,0 +1,26 @@
+{
+    "authors": [
+        "Author"
+    ],
+    "copyright": "Copyright",
+    "title": "Test_Song_v2_1_2",
+    "verse_order_list": [],
+    "verses": [
+        [
+            "Verse 1 Line 1\n{minor}Verse 1 Line 2 Minor{/minor}",
+            "V"
+        ],
+        [
+            "Chorus 1 Line 1\n{minor}Chorus 1 Line 2 Minor{/minor}",
+            "C"
+        ],
+        [
+            "Bridge 1 Line 1\n{minor}Bridge 1 Line 2{/minor}",
+            "B"
+        ],
+        [
+            "Verse 2 Line 1\n{minor}Verse 2 Line 2{/minor}",
+            "V"
+        ]
+    ]
+}

@@ -1,0 +1,152 @@
+# -*- coding: utf-8 -*-
+
+##########################################################################
+# OpenLP - Open Source Lyrics Projection                                 #
+# ---------------------------------------------------------------------- #
+# Copyright (c) 2008 OpenLP Developers                                   #
+# ---------------------------------------------------------------------- #
+# This program is free software: you can redistribute it and/or modify   #
+# it under the terms of the GNU General Public License as published by   #
+# the Free Software Foundation, either version 3 of the License, or      #
+# (at your option) any later version.                                    #
+#                                                                        #
+# This program is distributed in the hope that it will be useful,        #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of         #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          #
+# GNU General Public License for more details.                           #
+#                                                                        #
+# You should have received a copy of the GNU General Public License      #
+# along with this program.  If not, see <https://www.gnu.org/licenses/>. #
+##########################################################################
+"""
+The list of shortcuts within a dialog.
+"""
+from PySide6 import QtCore, QtWidgets
+
+from openlp.core.common.i18n import translate
+from openlp.core.lib.ui import create_button_box
+from openlp.core.ui.icons import UiIcons
+
+
+class CaptureShortcutButton(QtWidgets.QPushButton):
+    """
+    A class to encapsulate a ``QPushButton``.
+    """
+    def __init__(self, *args):
+        """
+        Constructor
+        """
+        super(CaptureShortcutButton, self).__init__(*args)
+        self.setCheckable(True)
+
+    def keyPressEvent(self, event):
+        """
+        Block the ``Key_Space`` key, so that the button will not change the
+        checked state.
+        """
+        if event.key() == QtCore.Qt.Key.Key_Space and self.isChecked():
+            # Ignore the event, so that the parent can take care of this.
+            event.ignore()
+
+
+class ShortcutTreeWidget(QtWidgets.QTreeWidget):
+    def __init__(self, *args):
+        super(ShortcutTreeWidget, self).__init__(*args)
+
+    def keyboardSearch(self, search):
+        """
+        Ignore searches to prevent single letter searches from highlighting items.
+
+        :param search: Search string
+        """
+        pass
+
+
+class Ui_ShortcutListDialog(object):
+    """
+    The UI widgets for the shortcut dialog.
+    """
+    def setup_ui(self, shortcutListDialog):
+        """
+        Set up the UI
+        """
+        shortcutListDialog.setObjectName('shortcutListDialog')
+        shortcutListDialog.setWindowIcon(UiIcons().main_icon)
+        shortcutListDialog.resize(500, 438)
+        self.shortcut_list_layout = QtWidgets.QVBoxLayout(shortcutListDialog)
+        self.shortcut_list_layout.setObjectName('shortcut_list_layout')
+        self.description_label = QtWidgets.QLabel(shortcutListDialog)
+        self.description_label.setObjectName('description_label')
+        self.description_label.setWordWrap(True)
+        self.shortcut_list_layout.addWidget(self.description_label)
+        self.tree_widget = ShortcutTreeWidget(shortcutListDialog)
+        self.tree_widget.setObjectName('tree_widget')
+        self.tree_widget.setAlternatingRowColors(True)
+        self.tree_widget.setColumnCount(3)
+        self.tree_widget.setColumnWidth(0, 250)
+        self.shortcut_list_layout.addWidget(self.tree_widget)
+        self.details_layout = QtWidgets.QGridLayout()
+        self.details_layout.setObjectName('details_layout')
+        self.details_layout.setContentsMargins(-1, 0, -1, -1)
+        self.default_radio_button = QtWidgets.QRadioButton(shortcutListDialog)
+        self.default_radio_button.setObjectName('default_radio_button')
+        self.default_radio_button.setChecked(True)
+        self.details_layout.addWidget(self.default_radio_button, 0, 0, 1, 1)
+        self.custom_radio_button = QtWidgets.QRadioButton(shortcutListDialog)
+        self.custom_radio_button.setObjectName('custom_radio_button')
+        self.details_layout.addWidget(self.custom_radio_button, 1, 0, 1, 1)
+        self.primary_layout = QtWidgets.QHBoxLayout()
+        self.primary_layout.setObjectName('primary_layout')
+        self.primary_push_button = CaptureShortcutButton(shortcutListDialog)
+        self.primary_push_button.setObjectName('primary_push_button')
+        self.primary_push_button.setMinimumSize(QtCore.QSize(84, 0))
+        self.primary_push_button.setIcon(UiIcons().shortcuts)
+        self.primary_layout.addWidget(self.primary_push_button)
+        self.clear_primary_button = QtWidgets.QToolButton(shortcutListDialog)
+        self.clear_primary_button.setObjectName('clear_primary_button')
+        self.clear_primary_button.setMinimumSize(QtCore.QSize(0, 16))
+        self.clear_primary_button.setIcon(UiIcons().settings)
+        self.primary_layout.addWidget(self.clear_primary_button)
+        self.details_layout.addLayout(self.primary_layout, 1, 1, 1, 1)
+        self.alternate_layout = QtWidgets.QHBoxLayout()
+        self.alternate_layout.setObjectName('alternate_layout')
+        self.alternate_push_button = CaptureShortcutButton(shortcutListDialog)
+        self.alternate_push_button.setObjectName('alternate_push_button')
+        self.alternate_push_button.setIcon(UiIcons().settings)
+        self.alternate_layout.addWidget(self.alternate_push_button)
+        self.clear_alternate_button = QtWidgets.QToolButton(shortcutListDialog)
+        self.clear_alternate_button.setObjectName('clear_alternate_button')
+        self.clear_alternate_button.setIcon(UiIcons().settings)
+        self.alternate_layout.addWidget(self.clear_alternate_button)
+        self.details_layout.addLayout(self.alternate_layout, 1, 2, 1, 1)
+        self.primary_label = QtWidgets.QLabel(shortcutListDialog)
+        self.primary_label.setObjectName('primary_label')
+        self.details_layout.addWidget(self.primary_label, 0, 1, 1, 1)
+        self.alternate_label = QtWidgets.QLabel(shortcutListDialog)
+        self.alternate_label.setObjectName('alternate_label')
+        self.details_layout.addWidget(self.alternate_label, 0, 2, 1, 1)
+        self.shortcut_list_layout.addLayout(self.details_layout)
+        self.button_box = create_button_box(shortcutListDialog, 'button_box', ['cancel', 'ok', 'defaults'])
+        self.button_box.setOrientation(QtCore.Qt.Orientation.Horizontal)
+        self.shortcut_list_layout.addWidget(self.button_box)
+        self.retranslate_ui(shortcutListDialog)
+
+    def retranslate_ui(self, shortcutListDialog):
+        """
+        Translate the UI on the fly
+        """
+        shortcutListDialog.setWindowTitle(translate('OpenLP.ShortcutListDialog', 'Configure Shortcuts'))
+        self.description_label.setText(
+            translate('OpenLP.ShortcutListDialog', 'Select an action and click one of the buttons below to start '
+                      'capturing a new primary or alternate shortcut, respectively.'))
+        self.tree_widget.setHeaderLabels([translate('OpenLP.ShortcutListDialog', 'Action'),
+                                         translate('OpenLP.ShortcutListDialog', 'Shortcut'),
+                                         translate('OpenLP.ShortcutListDialog', 'Alternate')])
+        self.default_radio_button.setText(translate('OpenLP.ShortcutListDialog', 'Default'))
+        self.custom_radio_button.setText(translate('OpenLP.ShortcutListDialog', 'Custom'))
+        self.primary_push_button.setToolTip(translate('OpenLP.ShortcutListDialog', 'Capture shortcut.'))
+        self.alternate_push_button.setToolTip(translate('OpenLP.ShortcutListDialog', 'Capture shortcut.'))
+        self.clear_primary_button.setToolTip(translate('OpenLP.ShortcutListDialog',
+                                             'Restore the default shortcut of this action.'))
+        self.clear_alternate_button.setToolTip(translate('OpenLP.ShortcutListDialog',
+                                               'Restore the default shortcut of this action.'))

@@ -1,0 +1,42 @@
+{
+    "authors": [
+        "John Newton",
+        "Edwin Excell",
+        "John P. Rees"
+    ],
+    "ccli_number": 22025,
+    "comments": "\n\n\n",
+    "copyright": "Public Domain ",
+    "song_book_name": "Demonstration Songs",
+    "song_number": 0,
+    "title": "Amazing Grace (Demonstration)",
+    "topics": [
+        "Assurance",
+        "Grace",
+        "Praise",
+        "Salvation"
+    ],
+    "verse_order_list": [],
+    "verses": [
+        [
+            "A[D]mazing [D7]grace! How [G]sweet the [D]sound!\nThat [Bm]saved a [E]wretch like [A]me![A7]\nI [D]once was [D7]lost, but [G]now am [D]found;\nWas [Bm]blind, but [A]now I [G]see.[D]",
+            "v1"
+        ],
+        [
+            "'Twas [D]grace that [D7]taught my [G]heart to [D]fear,\nAnd [Bm]grace my [E]fears re[A]lieved.[A7]\nHow [D]precious [D7]did that [G]grace ap[D]pear,\nThe [Bm]hour I [A]first be[G]lieved.[D]",
+            "v2"
+        ],
+        [
+            "The [D]Lord has [D7]promised [G]good to [D]me,\nHis [Bm]Word my [E]hope se[A]cures.[A7]\nHe [D]will my [D7]shield and [G]portion [D]be\nAs [Bm]long as [A]life en[G]dures.[D]",
+            "v3"
+        ],
+        [
+            "Thro' [D]many [D7]dangers, [G]toils and [D]snares\nI [Bm]have al[E]ready [A]come.[A7]\n'Tis [D]grace that [D7]brought me [G]safe thus [D]far,\nAnd [Bm]grace will [A]lead me [G]home.[D]",
+            "v4"
+        ],
+        [
+            "When [D]we've been [D7]there ten [G]thousand [D]years,\nBright [Bm]shining [E]as the [A]sun,[A7]\nWe've [D]no less [D7]days to [G]sing God's [D]praise,\nThan [Bm]when we [A]first be[G]gun.[D]",
+            "v5"
+        ]
+    ]
+}

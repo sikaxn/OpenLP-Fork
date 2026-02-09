@@ -1,0 +1,26 @@
+{
+    "authors": [
+        ["4. Jh", "words"],
+        ["Ignaz Franz (1719-1790)", "words"]
+    ],
+    "title": "Großer Gott, wir loben Dich",
+    "verse_order_list": ["v1", "v2", "v3", "v4"],
+    "verses": [
+        [
+            "[=D][D2]Großer [B=m7]Gott, wir l[Em7]oben [D/F#]Dich;\n[B=m7]Herr, wir [B=m7/A]preisen [Em7]Deine [Cadd9]Stärke.\n[D2]Vor dir [B=m7]neigt die [Em7]Erde [D/F#]sich\n[---]\n[B=m7]und bew[B=m7/A]undert [Em7]Deine [Cadd9]Werke.\n[Em7]Wie Du [Gm/B♭]warst vor [D2]aller [D2/F#]Zeit,\n[G]so bleibst [D/F#]Du in [Cadd9]Ewigkeit.\n[D2]  [D2]  [Gadd9/D]      [Gm6/D]\n",
+            "v1"
+        ],
+        [
+            "[D2]Alles, [B=m7]was Dich [Em7]preisen [D/F#]kann,\n[B=m7]Cherubim [B=m7/A]und [Em7]Sera[Cadd9]phinen,\n[D2]stimmen [B=m7]Dir ein [Em7]Loblied [D/F#]an,\n[---]\n[B=m7]alle E[B=m7/A]ngel, die [Em7]Dir di[Cadd9]enen,\n[Em7]rufen [Gm/B♭]Dir stets [D2]ohne [D2/F#]Ruh:\n[G]\"Heilig, h[D/F#]eilig, he[Cadd9]ilig!\" zu.\n[D2]  [D2]  [Gadd9/D]      [Gm6/D]\n",
+            "v2"
+        ],
+        [
+            "[D2]Heilig, H[B=m7]err Gott[Em7] Zeba[D/F#]oth!\n[B=m7]Heilig, [B=m7/A]Herr der [Em7]Himmels[Cadd9]heere!\n[D2]Starker [B=m7]Helfer [Em7]in der [D/F#]Not!\n[---]\n[B=m7]Himmel, [B=m7/A]Erde, [Em7]Luft und [Cadd9]Meere\n[Em7]sind erf[Gm/B♭]üllt von [D2]Deinem [D2/F#]Ruhm;\n[G]alles [D/F#]ist Dein E[Cadd9]igentum.\n[D2]  [D2]  [Gadd9/D]      [Gm6/D]\n",
+            "v3"
+        ],
+        [
+            "[D2]Herr, erb[B=m7]arm, erb[Cadd9]arme D[B=m7]ich.\n[D/A]Lass uns D[E/A]eine [Em7]Güte sc[Cadd9]hauen;\nD[D2]eine T[B=m7]reue [Cadd9]zeige s[B=m7]ich,\n[---]\n[D/A]wie wir f[E/A]est auf D[Em7]ich ver[Cadd9]trauen.\nA[Em7]uf Dich [Gadd9]hoffen [D/A]wir al[D2/B=]lein:\nL[G]ass uns n[D/F#]icht verloren [Am7]sein.\n",
+            "v4"
+        ]
+    ]
+}

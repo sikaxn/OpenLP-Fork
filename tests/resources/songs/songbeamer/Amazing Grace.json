@@ -1,0 +1,29 @@
+{
+    "authors": [
+        ["John Newton", "words"]
+    ],
+    "title": "Amazing grace",
+    "verse_order_list": ["v1", "v2", "v3", "v4", "v5"],
+    "verses": [
+        [
+            "[D]Amazing gr[D7]ace how [G]sweet the [D]sound\nThat saved a [E7]wretch like [A7]me\nI [D]once was [D7]lost but [G]now im [D]found\nWas b[E7]lind but no[A7]w i [D]see [A7]\n",
+            "v1"
+        ],
+        [
+            "T'was [D]grace that [D7]taught my [G]heart to [D]fear\nAnd grace my [E7]fears [A7]relieved\nHow [D]precious [D7]did that [G]Grace [D]appear\nThe [E7]hour I [A7]first bel[D]ieved.[A7]\n",
+            "v2"
+        ],
+        [
+            "Through [D]many [D7]dangers, [G]toils and [D]snares\nI have [E7]already [A7]come;\n'Tis [D]Grace that [D7]brought me [G]safe thus [D]far\nand [E7]Grace will [A7]lead me [D]home. [A7]\n",
+            "v3"
+        ],
+        [
+            "When we[D]'ve been here[D7] ten thous[G]and y[D]ears\nBright shining [E7]as the [A7]sun.\nWe've [D]no less [D7]days to s[G]ing God's p[D]raise\nThan w[E7]hen we've [A7]first [D]begun.[A7]\n",
+            "v4"
+        ],
+        [
+            "[D]Amazing gr[D7]ace how [G]sweet the [D]sound\nThat saved a [E7]wretch like [A7]me\nI [D]once was [D7]lost but [G]now im [D]found\nWas b[E7]lind but no[A7]w i [D]see [A]\n",
+            "v5"
+        ]
+    ]
+}

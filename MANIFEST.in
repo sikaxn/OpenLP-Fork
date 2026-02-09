@@ -1,0 +1,20 @@
+recursive-include openlp *.py
+recursive-include openlp *.sqlite
+recursive-include openlp *.csv
+recursive-include openlp *.html
+recursive-include openlp *.js
+recursive-include openlp *.css
+recursive-include openlp *.png
+recursive-include openlp *.ps
+recursive-include openlp *.json
+recursive-include openlp *.ttf
+recursive-include documentation *
+recursive-include resources *
+recursive-include scripts *
+recursive-include tests *
+include copyright.txt
+include LICENSE
+include README.txt
+include openlp/.version
+include package.json
+include karma.conf.js

@@ -1,0 +1,55 @@
+<RCC>
+  <qresource prefix="songs">
+    </qresource>
+  <qresource prefix="images">
+    </qresource>
+  <qresource prefix="bibles">
+    </qresource>
+  <qresource prefix="plugins">
+    </qresource>
+  <qresource prefix="general">
+    </qresource>
+  <qresource prefix="slides">
+    <file>slide_theme.png</file>
+    </qresource>
+  <qresource prefix="icon">
+    <file>openlp-logo.svg</file>
+  </qresource>
+  <qresource prefix="graphics">
+    <file>openlp-splash-screen.png</file>
+    <file>openlp-about-logo.png</file>
+  </qresource>
+  <qresource prefix="imports">
+    </qresource>
+  <qresource prefix="exports">
+    </qresource>
+  <qresource prefix="wizards">
+    <file>openlp-osx-wizard.png</file>
+    <file>wizard_song.bmp</file>
+    <file>wizard_importbible.bmp</file>
+    <file>wizard_firsttime.bmp</file>
+    <file>wizard_createtheme.bmp</file>
+    <file>wizard_duplicateremoval.bmp</file>
+    </qresource>
+  <qresource prefix="services">
+    </qresource>
+  <qresource prefix="system">
+    </qresource>
+  <qresource prefix="media">
+    </qresource>
+  <qresource prefix="messagebox">
+    </qresource>
+  <qresource prefix="remote">
+    </qresource>
+  <qresource prefix="songusage">
+    </qresource>
+  <qresource prefix="tools">
+    </qresource>
+  <qresource prefix="themes">
+    </qresource>
+  <qresource prefix="projector">
+    </qresource>
+  <qresource prefix="remotes">
+    <file>app_qr.svg</file>
+    </qresource>
+</RCC>

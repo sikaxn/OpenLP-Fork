@@ -1,0 +1,362 @@
+<?xml version="1.1"?>
+<Database>
+	<DatabaseDesc Name="Ebenezer7.vdb">
+		<DatabaseMode>1</DatabaseMode>
+		<DatabaseSegment>32768</DatabaseSegment>
+		<SchemaVersion>7</SchemaVersion>
+		<IdentsCaseSensitive>0</IdentsCaseSensitive>
+		<DateFormat>0</DateFormat>
+		<DateSeparator>/</DateSeparator>
+		<TimeSeparator>:</TimeSeparator>
+		<KeyDelimiter>.</KeyDelimiter>
+		<LocaleInfo>
+		<LocaleName>en_US_POSIX</LocaleName>
+		<CollationAttributes>
+			<FrenchCollation>16</FrenchCollation>
+			<AlternateHandling>21</AlternateHandling>
+			<CaseFirst>16</CaseFirst>
+			<CaseLevel>16</CaseLevel>
+			<NormalizationMode>16</NormalizationMode>
+			<Strength>2</Strength>
+			<HiraganaQuaternaryMode>16</HiraganaQuaternaryMode>
+			<NumericCollation>16</NumericCollation>
+		</CollationAttributes>
+		<IOEncoding>UTF-16</IOEncoding>
+		<StorageEncoding>UTF-16</StorageEncoding>
+		</LocaleInfo>
+		<SequenceCount>0</SequenceCount>
+		<KeyValueCount>0</KeyValueCount>
+		<TypeCount>0</TypeCount>
+		<Types>
+		</Types>
+		<IndexStyleCount>0</IndexStyleCount>
+		<BaseObjectCount>16</BaseObjectCount>
+		<LinkCount>0</LinkCount>
+		<ViewCount>0</ViewCount>
+		<SToredProcedureCount>0</SToredProcedureCount>
+		<TriggerCount>0</TriggerCount>
+	</DatabaseDesc>
+<DatabaseData>
+		<DatabaseStructureData>
+		</DatabaseStructureData>
+		<DatabaseUserData>
+			<BaseObjectData Name="SlideCol">
+				<Record>
+					<f n="RecID">1</f>
+					<f n="_rowid">       1.000000</f>
+					<f n="Type">song</f>
+					<f n="Title">A Charge To Keep I Have</f>
+					<f n="CreateDate">00/00/0000 00:00:00:000</f>
+					<f n="Author">Wesley, Charles / Mason, Lowell</f>
+					<f n="Copyright">Public Domain </f>
+					<f n="CCLI" />
+					<f n="UseCount">       0.000000</f>
+				</Record>
+				<Record>
+					<f n="RecID">2</f>
+					<f n="_rowid">       2.000000</f>
+					<f n="Type">song</f>
+					<f n="Title">A Child Of The King</f>
+					<f n="CreateDate">00/00/0000 00:00:00:000</f>
+					<f n="Author">Buell, Harriet Eugenia Peck / Sumner, John Bunnell</f>
+					<f n="Copyright">Public Domain </f>
+					<f n="CCLI" />
+					<f n="UseCount">       0.000000</f>
+				</Record>
+			</BaseObjectData>
+			<BaseObjectData Name="SlideColSlides">
+				<RecordCount>9478</RecordCount>
+				<Record>
+					<f n="RecID">1</f>
+					<f n="_rowid">       1.000000</f>
+					<f n="SlideCol_rowid">       1.000000</f>
+					<f n="Description">Verse 1</f>
+					<f n="Delay">       0.000000</f>
+					<f n="AudioDone">0</f>
+					<f n="AudioId">       0.000000</f>
+					<f n="AudioPath" />
+					<f n="BkColor" />
+					<f n="BkDone">0</f>
+					<f n="BKFullScreen">0</f>
+					<f n="BkId">       0.000000</f>
+					<f n="BkPath" />
+					<f n="BkSize">       0.000000</f>
+					<f n="BkStretch">0</f>
+					<f n="BkX">       0.000000</f>
+					<f n="BkY">       0.000000</f>
+					<f n="kText"><![CDATA[A charge to keep I have,&#x0D;A God to glorify,&#x0D;A never dying soul to save,&#x0D;And fit it for the sky.]]></f>
+					<f n="TextDone">0</f>
+					<f n="TextDS">0</f>
+					<f n="TextDSColor" />
+					<f n="TextDSOffSet">       0.000000</f>
+					<f n="TextHalign" />
+					<f n="TextId">       0.000000</f>
+					<f n="StyledText" />
+					<f n="TextValign" />
+					<f n="TextX1">       0.000000</f>
+					<f n="TextX2">       0.000000</f>
+				</Record>
+				<Record>
+					<f n="RecID">2</f>
+					<f n="_rowid">       2.000000</f>
+					<f n="SlideCol_rowid">       1.000000</f>
+					<f n="Description">Verse 2</f>
+					<f n="Delay">       0.000000</f>
+					<f n="AudioDone">0</f>
+					<f n="AudioId">       0.000000</f>
+					<f n="AudioPath" />
+					<f n="BkColor" />
+					<f n="BkDone">0</f>
+					<f n="BKFullScreen">0</f>
+					<f n="BkId">       0.000000</f>
+					<f n="BkPath" />
+					<f n="BkSize">       0.000000</f>
+					<f n="BkStretch">0</f>
+					<f n="BkX">       0.000000</f>
+					<f n="BkY">       0.000000</f>
+					<f n="kText"><![CDATA[To serve the present age,&#x0D;My calling to fulfill;&#x0D;O may it all my powr^`^s engage&#x0D;To do my Master^`^s will!]]></f>
+					<f n="TextDone">0</f>
+					<f n="TextDS">0</f>
+					<f n="TextDSColor" />
+					<f n="TextDSOffSet">       0.000000</f>
+					<f n="TextHalign" />
+					<f n="TextId">       0.000000</f>
+					<f n="StyledText" />
+					<f n="TextValign" />
+					<f n="TextX1">       0.000000</f>
+					<f n="TextX2">       0.000000</f>
+				</Record>
+				<Record>
+					<f n="RecID">3</f>
+					<f n="_rowid">       3.000000</f>
+					<f n="SlideCol_rowid">       1.000000</f>
+					<f n="Description">Verse 3</f>
+					<f n="Delay">       0.000000</f>
+					<f n="AudioDone">0</f>
+					<f n="AudioId">       0.000000</f>
+					<f n="AudioPath" />
+					<f n="BkColor" />
+					<f n="BkDone">0</f>
+					<f n="BKFullScreen">0</f>
+					<f n="BkId">       0.000000</f>
+					<f n="BkPath" />
+					<f n="BkSize">       0.000000</f>
+					<f n="BkStretch">0</f>
+					<f n="BkX">       0.000000</f>
+					<f n="BkY">       0.000000</f>
+					<f n="kText"><![CDATA[Arm me with jealous care,&#x0D;As in Thy sight to live,&#x0D;And O, Thy servant, Lord, prepare,&#x0D;A strict account to give!]]></f>
+					<f n="TextDone">0</f>
+					<f n="TextDS">0</f>
+					<f n="TextDSColor" />
+					<f n="TextDSOffSet">       0.000000</f>
+					<f n="TextHalign" />
+					<f n="TextId">       0.000000</f>
+					<f n="StyledText" />
+					<f n="TextValign" />
+					<f n="TextX1">       0.000000</f>
+					<f n="TextX2">       0.000000</f>
+				</Record>
+				<Record>
+					<f n="RecID">4</f>
+					<f n="_rowid">       4.000000</f>
+					<f n="SlideCol_rowid">       1.000000</f>
+					<f n="Description">Verse 4</f>
+					<f n="Delay">       0.000000</f>
+					<f n="AudioDone">0</f>
+					<f n="AudioId">       0.000000</f>
+					<f n="AudioPath" />
+					<f n="BkColor" />
+					<f n="BkDone">0</f>
+					<f n="BKFullScreen">0</f>
+					<f n="BkId">       0.000000</f>
+					<f n="BkPath" />
+					<f n="BkSize">       0.000000</f>
+					<f n="BkStretch">0</f>
+					<f n="BkX">       0.000000</f>
+					<f n="BkY">       0.000000</f>
+					<f n="kText"><![CDATA[Help me to watch and pray,&#x0D;And on Thyself rely,&#x0D;Assured, if I my trust betray,&#x0D;I shall forever die.]]></f>
+					<f n="TextDone">0</f>
+					<f n="TextDS">0</f>
+					<f n="TextDSColor" />
+					<f n="TextDSOffSet">       0.000000</f>
+					<f n="TextHalign" />
+					<f n="TextId">       0.000000</f>
+					<f n="StyledText" />
+					<f n="TextValign" />
+					<f n="TextX1">       0.000000</f>
+					<f n="TextX2">       0.000000</f>
+				</Record>
+				<Record>
+					<f n="RecID">5</f>
+					<f n="_rowid">       5.000000</f>
+					<f n="SlideCol_rowid">       2.000000</f>
+					<f n="Description">Verse 1</f>
+					<f n="Delay">       0.000000</f>
+					<f n="AudioDone">0</f>
+					<f n="AudioId">       0.000000</f>
+					<f n="AudioPath" />
+					<f n="BkColor" />
+					<f n="BkDone">0</f>
+					<f n="BKFullScreen">0</f>
+					<f n="BkId">       0.000000</f>
+					<f n="BkPath" />
+					<f n="BkSize">       0.000000</f>
+					<f n="BkStretch">0</f>
+					<f n="BkX">       0.000000</f>
+					<f n="BkY">       0.000000</f>
+					<f n="kText"><![CDATA[My Father is rich in houses and lands,&#x0D;He holdeth the wealth of the world in His hands!&#x0D;Of rubies and diamonds, of silver and gold,&#x0D;His coffers are full, He has riches untold.]]></f>
+					<f n="TextDone">0</f>
+					<f n="TextDS">0</f>
+					<f n="TextDSColor" />
+					<f n="TextDSOffSet">       0.000000</f>
+					<f n="TextHalign" />
+					<f n="TextId">       0.000000</f>
+					<f n="StyledText" />
+					<f n="TextValign" />
+					<f n="TextX1">       0.000000</f>
+					<f n="TextX2">       0.000000</f>
+				</Record>
+				<Record>
+					<f n="RecID">6</f>
+					<f n="_rowid">       6.000000</f>
+					<f n="SlideCol_rowid">       2.000000</f>
+					<f n="Description">Verse 2</f>
+					<f n="Delay">       0.000000</f>
+					<f n="AudioDone">0</f>
+					<f n="AudioId">       0.000000</f>
+					<f n="AudioPath" />
+					<f n="BkColor" />
+					<f n="BkDone">0</f>
+					<f n="BKFullScreen">0</f>
+					<f n="BkId">       0.000000</f>
+					<f n="BkPath" />
+					<f n="BkSize">       0.000000</f>
+					<f n="BkStretch">0</f>
+					<f n="BkX">       0.000000</f>
+					<f n="BkY">       0.000000</f>
+					<f n="kText"><![CDATA[My Father^`^s own Son, the Savior of men,&#x0D;Once wandered on earth as the poorest of them;&#x0D;But now He is pleading our pardon on high,&#x0D;That we may be His when He comes by and by.]]></f>
+					<f n="TextDone">0</f>
+					<f n="TextDS">0</f>
+					<f n="TextDSColor" />
+					<f n="TextDSOffSet">       0.000000</f>
+					<f n="TextHalign" />
+					<f n="TextId">       0.000000</f>
+					<f n="StyledText" />
+					<f n="TextValign" />
+					<f n="TextX1">       0.000000</f>
+					<f n="TextX2">       0.000000</f>
+				</Record>
+				<Record>
+					<f n="RecID">7</f>
+					<f n="_rowid">       7.000000</f>
+					<f n="SlideCol_rowid">       2.000000</f>
+					<f n="Description">Verse 3</f>
+					<f n="Delay">       0.000000</f>
+					<f n="AudioDone">0</f>
+					<f n="AudioId">       0.000000</f>
+					<f n="AudioPath" />
+					<f n="BkColor" />
+					<f n="BkDone">0</f>
+					<f n="BKFullScreen">0</f>
+					<f n="BkId">       0.000000</f>
+					<f n="BkPath" />
+					<f n="BkSize">       0.000000</f>
+					<f n="BkStretch">0</f>
+					<f n="BkX">       0.000000</f>
+					<f n="BkY">       0.000000</f>
+					<f n="kText"><![CDATA[I once was an outcast stranger on earth,&#x0D;A sinner by choice, an alien by birth,&#x0D;But I^`^ve been adopted, my name^`^s written down,&#x0D;An heir to a mansion, a robe and a crown.]]></f>
+					<f n="TextDone">0</f>
+					<f n="TextDS">0</f>
+					<f n="TextDSColor" />
+					<f n="TextDSOffSet">       0.000000</f>
+					<f n="TextHalign" />
+					<f n="TextId">       0.000000</f>
+					<f n="StyledText" />
+					<f n="TextValign" />
+					<f n="TextX1">       0.000000</f>
+					<f n="TextX2">       0.000000</f>
+				</Record>
+				<Record>
+					<f n="RecID">8</f>
+					<f n="_rowid">       8.000000</f>
+					<f n="SlideCol_rowid">       2.000000</f>
+					<f n="Description">Verse 4</f>
+					<f n="Delay">       0.000000</f>
+					<f n="AudioDone">0</f>
+					<f n="AudioId">       0.000000</f>
+					<f n="AudioPath" />
+					<f n="BkColor" />
+					<f n="BkDone">0</f>
+					<f n="BKFullScreen">0</f>
+					<f n="BkId">       0.000000</f>
+					<f n="BkPath" />
+					<f n="BkSize">       0.000000</f>
+					<f n="BkStretch">0</f>
+					<f n="BkX">       0.000000</f>
+					<f n="BkY">       0.000000</f>
+					<f n="kText"><![CDATA[A tent or a cottage, why should I care?&#x0D;They^`^re building a palace for me over there;&#x0D;Though exiled from home, yet still may I sing:&#x0D;All glory to God, I^`^m a child of the King.]]></f>
+					<f n="TextDone">0</f>
+					<f n="TextDS">0</f>
+					<f n="TextDSColor" />
+					<f n="TextDSOffSet">       0.000000</f>
+					<f n="TextHalign" />
+					<f n="TextId">       0.000000</f>
+					<f n="StyledText" />
+					<f n="TextValign" />
+					<f n="TextX1">       0.000000</f>
+					<f n="TextX2">       0.000000</f>
+				</Record>
+				<Record>
+					<f n="RecID">9</f>
+					<f n="_rowid">       9.000000</f>
+					<f n="SlideCol_rowid">       2.000000</f>
+					<f n="Description">Chorus</f>
+					<f n="Delay">       0.000000</f>
+					<f n="AudioDone">0</f>
+					<f n="AudioId">       0.000000</f>
+					<f n="AudioPath" />
+					<f n="BkColor" />
+					<f n="BkDone">0</f>
+					<f n="BKFullScreen">0</f>
+					<f n="BkId">       0.000000</f>
+					<f n="BkPath" />
+					<f n="BkSize">       0.000000</f>
+					<f n="BkStretch">0</f>
+					<f n="BkX">       0.000000</f>
+					<f n="BkY">       0.000000</f>
+					<f n="kText"><![CDATA[I^`^m a child of the King,&#x0D;A child of the King:&#x0D;With Jesus my Savior,&#x0D;I^`^m a child of the King.]]></f>
+					<f n="TextDone">0</f>
+					<f n="TextDS">0</f>
+					<f n="TextDSColor" />
+					<f n="TextDSOffSet">       0.000000</f>
+					<f n="TextHalign" />
+					<f n="TextId">       0.000000</f>
+					<f n="StyledText" />
+					<f n="TextValign" />
+					<f n="TextX1">       0.000000</f>
+					<f n="TextX2">       0.000000</f>
+				</Record>
+			</BaseObjectData>
+			<BaseObjectData Name="TagGroup">
+				<RecordCount>158</RecordCount>
+				<Record>
+					<f n="RecID">1</f>
+					<f n="_rowid">     854.000000</f>
+					<f n="Tag_rowid">      28.000000</f>
+					<f n="Lib_rowid">       0.000000</f>
+					<f n="gText_rowid">       0.000000</f>
+					<f n="SlideCol_rowid">    2.000000</f>
+					<f n="Presentation_rowid">       0.000000</f>
+				</Record>
+			</BaseObjectData>
+			<BaseObjectData Name="Tag">
+				<RecordCount>11</RecordCount>
+				<Record>
+					<f n="RecID">1</f>
+					<f n="_rowid">      28.000000</f>
+					<f n="MediaType_rowid">       6.000000</f>
+					<f n="Description"> Worship</f>
+				</Record>
+			</BaseObjectData>
+		</DatabaseUserData>
+</DatabaseData></Database>

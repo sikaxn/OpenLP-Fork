@@ -1,0 +1,44 @@
+{
+    "title": "BBBBBBBBB",
+    "authors": [
+        "John Newton (1725-1807)"
+    ],
+    "verses": [
+        [
+            "V1V1V1V1V1V1\nV1V1V1V1V1V1",
+            "v1"
+        ],
+        [
+            "V2V2V2V2V2V2\nV2V2V2V2V2V2",
+            "v2"
+        ],
+        [
+            "C1C1C1C1C1C1\nC1C1C1C1C1C1",
+            "c1"
+        ],
+        [
+            "C2C2C2C2C2C2\nC2C2C2C2C2C2",
+            "c2"
+        ],
+        [
+            "B1B1B1B1B1B1\nB1B1B1B1B1B1",
+            "b1"
+        ],
+        [
+            "B2B2B2B2B2B2\nB2B2B2B2B2B2",
+            "b2"
+        ],
+        [
+            "PRE1PRE1PRE1\nPRE1PRE1PRE1",
+            "p1"
+        ],
+        [
+            "PRE2PRE2PRE2\nPRE2PRE2PRE2",
+            "p2"
+        ],
+        [
+            "ENDENDENDEND\nENDENDENDEND",
+            "e1"
+        ]
+    ]
+}

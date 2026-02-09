@@ -1,0 +1,18 @@
+{
+    "authors": [
+        "Author"
+    ],
+    "copyright": "Copyright",
+    "title": "Test_Song_v2_0_0",
+    "verse_order_list": [],
+    "verses": [
+        [
+            "Verse 1 Line 1\nVerse 1 Line 2\nVerse 1 Line 3\nVerse 1 Line 4",
+            "V"
+        ],
+        [
+            "Chorus 1 Line 1\nChorus 1 Line 2\nChorus 1 Line 3\nChorus 1 Line 4\nChorus 1 Line 5",
+            "C"
+        ]
+    ]
+}

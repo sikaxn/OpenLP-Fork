@@ -1,0 +1,10 @@
+{
+"title": "Some Song",
+ "authors": [
+   ["Author", "words"]
+ ],
+ "verses" : [
+   ["Here are a couple of \"weird\" chars’’’.\n", "v"],
+   ["Here is another one….\n\n", "v"]
+ ]
+}

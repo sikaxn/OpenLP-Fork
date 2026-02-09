@@ -1,0 +1,24 @@
+{
+    "title": "Amazing Grace",
+    "authors": [
+        "John Newton"
+    ],
+    "verses": [
+        [
+            "Amazing Grace, how sweet the sound,\nThat saved a wretch like me.\nI once was lost, but now im found,\nWas blind, but now I see.",
+            "v"
+        ],
+        [
+            "Twas grace that taught my heart to fear,\nand grace my fears released.\nHow precious did that grace appear,\nthe hour I first believed.",
+            "v"
+        ],
+        [
+            "When we've been there ten thousand years,\nbright shining as the sun,\nwe've no less days to sing god's praise\nthan when did when we first begun.",
+            "v"
+        ],
+        [
+            "Amazing Grace, how sweet the sound,\nThat saved a wretch like me.\nI once was lost, but now im found,\nWas blind, but now I see.",
+            "v"
+        ]
+    ]
+}

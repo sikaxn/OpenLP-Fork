@@ -1,0 +1,176 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "OpenLP"
+dynamic = ["version"]
+description = "Open source Church presentation and lyrics projection application."
+readme = "README.rst"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.10"
+authors = [
+    { name = "OpenLP Developers", email = "info@openlp.org" },
+]
+keywords = [
+    "bible",
+    "church",
+    "display",
+    "lyrics",
+    "open",
+    "presentation",
+    "project",
+    "projection",
+    "song",
+    "source",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: MacOS X",
+    "Environment :: Win32 (MS Windows)",
+    "Environment :: X11 Applications",
+    "Environment :: X11 Applications :: Qt",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Religion",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Natural Language :: Afrikaans",
+    "Natural Language :: Dutch",
+    "Natural Language :: English",
+    "Natural Language :: French",
+    "Natural Language :: German",
+    "Natural Language :: Hungarian",
+    "Natural Language :: Indonesian",
+    "Natural Language :: Japanese",
+    "Natural Language :: Norwegian",
+    "Natural Language :: Portuguese (Brazilian)",
+    "Natural Language :: Russian",
+    "Natural Language :: Swedish",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: BSD :: FreeBSD",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Topic :: Desktop Environment :: Gnome",
+    "Topic :: Desktop Environment :: K Desktop Environment (KDE)",
+    "Topic :: Multimedia",
+    "Topic :: Multimedia :: Graphics :: Presentation",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Religion",
+]
+dependencies = [
+    "alembic",
+    "beautifulsoup4",
+    "chardet",
+    "distro; platform_system==\"Linux\"",
+    "flask",
+    "flask-cors",
+    "lxml",
+    "Mako",
+    "pillow",
+    "platformdirs",
+    "PyICU",
+    "pyobjc-framework-Cocoa; platform_system==\"Darwin\"",
+    "pyobjc; platform_system==\"Darwin\"",
+    "PySide6",
+    "Pyro5; platform_system==\"Darwin\"",
+    "pywin32; platform_system==\"Windows\"",
+    "qrcode",
+    "QtAwesome",
+    "requests",
+    "SQLAlchemy >= 1.4",
+    "waitress",
+    "websocket-client",
+    "websockets",
+]
+
+[project.optional-dependencies]
+agpl-pdf = [
+    "PyMuPDF",
+]
+darkstyle = [
+    "QDarkStyle",
+]
+mysql = [
+    "PyMySQL",
+]
+odbc = [
+    "pyodbc",
+]
+postgresql = [
+    "psycopg2",
+]
+spellcheck = [
+    "pyenchant >= 1.6",
+]
+sword-bibles = [
+    "pysword",
+]
+test = [
+    "flake8",
+    "hatch",
+    "PyMuPDF",
+    "pyodbc",
+    "pysword",
+    "pytest",
+    "pytest-qt",
+]
+
+[project.scripts]
+openlp = "openlp.__main__:start"
+
+[project.urls]
+Homepage = "https://openlp.org/"
+Source = "https://gitlab.com/openlp/openlp"
+Issues = "https://gitlab.com/openlp/openlp/-/issues"
+Documentation = "https://manual.openlp.org"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "openlp/.version"
+template = "{version}"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/openlp",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+    "openlp",
+]
+
+[tool.hatch.envs.default]
+dependencies = [
+    "hatchling",
+    "hatch-vcs"
+]
+
+[tool.hatch.envs.default.scripts]
+# For those who have problems running "hatch run openlp"
+run_openlp = "python run_openlp.py"
+
+[tool.hatch.envs.test]
+dependencies = [
+    "flake8",
+    "hatchling",
+    "hatch-vcs",
+    "PyMuPDF",
+    "PyMySQL",
+    "pyenchant >= 1.6",
+    "pyodbc",
+    "pysword",
+    "pytest",
+    "pytest-qt",
+    "pytest-cov",
+]
+
+[tool.hatch.envs.test.scripts]
+run = "pytest tests {args}"
+run_selected = "pytest {args}"
+cov = "pytest tests --cov openlp --cov-report html {args}"
+debug = "pytest tests --pudb {args}"
+ci = "pytest tests --color=no --disable-warnings {args}"

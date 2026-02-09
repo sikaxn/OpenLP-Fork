@@ -1,0 +1,21 @@
+{
+    "authors": [
+        "Author One",
+        "Author Two"
+    ],
+    "ccli_number": "123456",
+    "song_number": 0,
+    "title": "Test Song",
+    "copyright": "© 2023 OpenLP Music",
+    "verse_order_list": [],
+    "verses": [
+        [
+            "Line One Verse One\nLine Two Verse One\nLine Three Verse One\nLine Four Verse One\n",
+            "v"
+        ],
+        [
+            "Line One Verse Two\nLine Two Verse Two\nLine Three Verse Two\nLine Four Verse Two\n",
+            "v"
+        ]
+    ]
+}

@@ -1,0 +1,52 @@
+#!/bin/sh
+# vim: autoindent shiftwidth=4 expandtab textwidth=120 tabstop=4 softtabstop=4
+
+##########################################################################
+# OpenLP - Open Source Lyrics Projection                                 #
+# ---------------------------------------------------------------------- #
+# Copyright (c) 2008-2024 OpenLP Developers                              #
+# ---------------------------------------------------------------------- #
+# This program is free software: you can redistribute it and/or modify   #
+# it under the terms of the GNU General Public License as published by   #
+# the Free Software Foundation, either version 3 of the License, or      #
+# (at your option) any later version.                                    #
+#                                                                        #
+# This program is distributed in the hope that it will be useful,        #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of         #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          #
+# GNU General Public License for more details.                           #
+#                                                                        #
+# You should have received a copy of the GNU General Public License      #
+# along with this program.  If not, see <https://www.gnu.org/licenses/>. #
+##########################################################################
+#
+# This script automates the update of the translations on OpenLP.
+#
+# It uses the tx client from Transifex for all the heavy lifting
+# All download *.ts files are converted to *.qm files which are used by
+# OpenLP.
+#
+###############################################################################
+pwd=`pwd`
+result=${PWD##*/}; echo $result
+
+if [ $result != 'scripts' ] ; then
+	echo 'This script must be run from the scripts directory'
+	exit
+fi
+
+rm ../resources/i18n/*.ts
+
+echo
+echo Downloading the translated files
+echo
+tx pull -a --minimum-perc=45
+
+echo Checking for tag errors
+
+./check-i18n.py -b ../resources/i18n/
+
+echo Translation update complete
+
+
+
