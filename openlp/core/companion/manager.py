@@ -661,6 +661,9 @@ class CompanionManager(QtWidgets.QWidget):
             self.autotrigger_enabled = False
             self.settings.setValue('companion/autotrigger enabled', False)
 
+    def _first_slide_safety_enabled(self):
+        return self._to_bool(self.settings.value('companion/first slide safety'), default=False)
+
     def _refresh_companion_list(self):
         self.companion_list_widget.clear()
         selected_row = None
@@ -1394,10 +1397,14 @@ class CompanionManager(QtWidgets.QWidget):
             self._refresh_autotrigger_list()
         else:
             self._refresh_autotrigger_list_labels()
+        service_item_changed = bool(
+            old_key is not None and new_key is not None and (old_key[0] != new_key[0] or old_key[1] != new_key[1])
+        )
         if old_key is not None:
             self._run_autotriggers(old_key[0], old_key[1], old_key[2], on_enter=False)
         if new_key is not None:
-            self._run_autotriggers(new_key[0], new_key[1], new_key[2], on_enter=True)
+            self._run_autotriggers(new_key[0], new_key[1], new_key[2], on_enter=True,
+                                   service_item_changed=service_item_changed)
 
     @staticmethod
     def _trigger_matches_item(trigger, item_ref, item_id):
@@ -1442,7 +1449,7 @@ class CompanionManager(QtWidgets.QWidget):
         except Exception as err:
             self._trace(f'failed to update live auto-trigger markers: {err}')
 
-    def _run_autotriggers(self, item_ref, item_id, slide_row, on_enter):
+    def _run_autotriggers(self, item_ref, item_id, slide_row, on_enter, service_item_changed=False):
         if not self.autotrigger_enabled:
             return
         for companion in self.companions:
@@ -1453,6 +1460,9 @@ class CompanionManager(QtWidgets.QWidget):
                 if int(trigger.get('slide_row', -1)) != int(slide_row):
                     continue
                 mode = trigger.get('mode', AUTO_TRIGGER_ENTER_PRESS)
+                if (on_enter and service_item_changed and int(slide_row) == 0 and self._first_slide_safety_enabled() and
+                        mode in (AUTO_TRIGGER_ENTER_PRESS, AUTO_TRIGGER_HOLD)):
+                    continue
                 action = None
                 if mode == AUTO_TRIGGER_ENTER_PRESS and on_enter:
                     action = 'PRESS'
