@@ -27,6 +27,7 @@ from PySide6 import QtCore, QtWidgets, QtGui
 
 from openlp.core.state import State
 from openlp.core.api.tab import ApiTab
+from openlp.core.companion.tab import CompanionTab
 from openlp.core.common.mixins import RegistryProperties
 from openlp.core.common.registry import Registry
 from openlp.core.lib import build_icon
@@ -65,6 +66,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         self.themes_tab = None
         self.player_tab = None
         self.projector_tab = None
+        self.companion_tab = None
         self.advanced_tab = None
         self.api_tab = None
 
@@ -85,6 +87,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         self.insert_tab(self.themes_tab)
         self.insert_tab(self.player_tab)
         self.insert_tab(self.projector_tab)
+        self.insert_tab(self.companion_tab)
         self.insert_tab(self.api_tab)
         for plugin in State().list_plugins():
             if plugin.settings_tab:
@@ -167,6 +170,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
             self.service_tab = ServiceTab(self)
             self.themes_tab = ThemesTab(self)
             self.projector_tab = ProjectorTab(self)
+            self.companion_tab = CompanionTab(self)
             self.advanced_tab = AdvancedTab(self)
             self.player_tab = MediaTab(self)
             self.api_tab = ApiTab(self)

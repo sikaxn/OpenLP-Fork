@@ -505,6 +505,7 @@ class Settings(QtCore.QSettings):
         'user interface/preview splitter geometry': QtCore.QByteArray(),
         'user interface/theme manager view mode': 0,
         'user interface/show library': True,
+        'user interface/show companion': False,
         'user interface/show projectors': True,
         'user interface/show service': True,
         'user interface/show themes': True,
@@ -522,7 +523,11 @@ class Settings(QtCore.QSettings):
         'projector/poll time': 20,  # PJLink  timeout is 30 seconds
         'projector/socket timeout': 5,  # 5 second socket timeout
         'projector/source dialog type': 0,  # Source select dialog box type
-        'projector/udp broadcast listen': False  # Enable/disable listening for PJLink 2 UDP broadcast packets
+        'projector/udp broadcast listen': False,  # Enable/disable listening for PJLink 2 UDP broadcast packets
+        'companion/data': '[]',
+        'companion/default id': '',
+        'companion/autotrigger enabled': True,
+        'companion/auto connect default on startup': True
     }
     __file_path__ = ''
     # Settings upgrades prior to 3.0
@@ -796,6 +801,7 @@ class Settings(QtCore.QSettings):
             'shortcuts/toolsAddToolItem': [],
             'shortcuts/updateThemeImages': [],
             'shortcuts/up': [QtGui.QKeySequence(QtCore.Qt.Key.Key_Up)],
+            'shortcuts/viewCompanionManagerItem': [],
             'shortcuts/viewProjectorManagerItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_F6)],
             'shortcuts/viewThemeManagerItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_F10)],
             'shortcuts/viewMediaManagerItem': [QtGui.QKeySequence(QtCore.Qt.Key.Key_F8)],
