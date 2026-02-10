@@ -48,6 +48,14 @@ class CompanionTab(SettingsTab):
         self.auto_connect_default_checkbox = QtWidgets.QCheckBox(self.connection_group_box)
         self.auto_connect_default_checkbox.setObjectName('auto_connect_default_checkbox')
         self.connection_layout.addRow(self.auto_connect_default_checkbox)
+        self.autotrigger_open_mode_label = QtWidgets.QLabel(self.connection_group_box)
+        self.autotrigger_open_mode_label.setObjectName('autotrigger_open_mode_label')
+        self.autotrigger_open_mode_combo = QtWidgets.QComboBox(self.connection_group_box)
+        self.autotrigger_open_mode_combo.setObjectName('autotrigger_open_mode_combo')
+        self.autotrigger_open_mode_combo.addItem('', 'last')
+        self.autotrigger_open_mode_combo.addItem('', 'on')
+        self.autotrigger_open_mode_combo.addItem('', 'off')
+        self.connection_layout.addRow(self.autotrigger_open_mode_label, self.autotrigger_open_mode_combo)
         self.left_layout.addWidget(self.connection_group_box)
         self.left_layout.addStretch()
 
@@ -55,12 +63,36 @@ class CompanionTab(SettingsTab):
         self.tab_title_visible = translate('OpenLP.CompanionTab', 'Companion')
         self.connection_group_box.setTitle(translate('OpenLP.CompanionTab', 'Connection Options'))
         self.auto_connect_default_checkbox.setText(
-            translate('OpenLP.CompanionTab', 'Auto connect default companion on startup'))
+            translate('OpenLP.CompanionTab', 'Auto connect default companion on file open'))
+        self.autotrigger_open_mode_label.setText(
+            translate('OpenLP.CompanionTab', 'Auto trigger on file open:'))
+        self.autotrigger_open_mode_combo.setItemText(
+            0, translate('OpenLP.CompanionTab', 'Use last setting'))
+        self.autotrigger_open_mode_combo.setItemText(
+            1, translate('OpenLP.CompanionTab', 'Always ON'))
+        self.autotrigger_open_mode_combo.setItemText(
+            2, translate('OpenLP.CompanionTab', 'Always OFF'))
 
     def load(self):
+        auto_connect = self.settings.value('companion/auto connect default on file open')
         self.auto_connect_default_checkbox.setChecked(
-            self.settings.value('companion/auto connect default on startup'))
+            self._to_bool(auto_connect, default=True))
+        mode = str(self.settings.value('companion/autotrigger on file open mode') or 'last').lower()
+        index = self.autotrigger_open_mode_combo.findData(mode)
+        if index < 0:
+            index = self.autotrigger_open_mode_combo.findData('last')
+        if index >= 0:
+            self.autotrigger_open_mode_combo.setCurrentIndex(index)
 
     def save(self):
-        self.settings.setValue('companion/auto connect default on startup',
+        self.settings.setValue('companion/auto connect default on file open',
                                self.auto_connect_default_checkbox.isChecked())
+        self.settings.setValue('companion/autotrigger on file open mode',
+                               self.autotrigger_open_mode_combo.currentData())
+    @staticmethod
+    def _to_bool(value, default=False):
+        if value is None:
+            return default
+        if isinstance(value, str):
+            return value.strip().lower() in ('1', 'true', 'yes', 'on')
+        return bool(value)

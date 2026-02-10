@@ -527,7 +527,8 @@ class Settings(QtCore.QSettings):
         'companion/data': '[]',
         'companion/default id': '',
         'companion/autotrigger enabled': True,
-        'companion/auto connect default on startup': True
+        'companion/auto connect default on file open': True,
+        'companion/autotrigger on file open mode': 'last'
     }
     __file_path__ = ''
     # Settings upgrades prior to 3.0

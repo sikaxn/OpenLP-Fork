@@ -294,7 +294,8 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
             if markers:
                 marker_text = ', '.join(markers)
                 if self.service_item.is_text():
-                    base_text = item.data(self._base_text_role) or item.text() or ''
+                    base_text_data = item.data(self._base_text_role)
+                    base_text = item.text() if base_text_data is None else str(base_text_data)
                     item.setText('{base}  [Auto: {markers}]'.format(base=base_text, markers=marker_text))
                 item.setBackground(QtGui.QBrush(marker_background))
                 item.setForeground(QtGui.QBrush(marker_foreground))
@@ -304,7 +305,8 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                     widget.setStyleSheet('background-color: #FFF3CD;')
             else:
                 if self.service_item.is_text():
-                    base_text = item.data(self._base_text_role) or item.text() or ''
+                    base_text_data = item.data(self._base_text_role)
+                    base_text = item.text() if base_text_data is None else str(base_text_data)
                     item.setText(base_text)
                 item.setBackground(QtGui.QBrush(QtCore.Qt.GlobalColor.transparent))
                 item.setForeground(QtGui.QBrush())

@@ -314,7 +314,7 @@ class CompanionAutoTriggerEditForm(QtWidgets.QDialog):
         self.button_box.rejected.connect(self.reject)
         layout.addWidget(self.button_box, 6, 0, 1, 3)
 
-    def exec(self, buttons, trigger_data=None, item_name_resolver=None):
+    def exec(self, buttons, trigger_data=None, item_name_resolver=None, preferred_button_id=''):
         self._buttons = list(buttons or [])
         self._item_name_resolver = item_name_resolver
         self.button_combo.clear()
@@ -341,6 +341,9 @@ class CompanionAutoTriggerEditForm(QtWidgets.QDialog):
             self.setWindowTitle(translate('OpenLP.CompanionAutoTriggerEditForm', 'Edit Auto Trigger'))
         else:
             self.name_text.setText('')
+            preferred_index = self.button_combo.findData(preferred_button_id)
+            if preferred_index >= 0:
+                self.button_combo.setCurrentIndex(preferred_index)
             self._item_ref = ''
             self._item_id = ''
             self.item_text.setText('')
@@ -403,13 +406,6 @@ class CompanionAutoTriggerEditForm(QtWidgets.QDialog):
         item_ref = self._item_ref.strip() if isinstance(self._item_ref, str) else ''
         item_id = self._item_id.strip() if isinstance(self._item_id, str) else ''
         button_id = self.button_combo.currentData()
-        if not name:
-            QtWidgets.QMessageBox.warning(
-                self,
-                translate('OpenLP.CompanionAutoTriggerEditForm', 'Invalid Input'),
-                translate('OpenLP.CompanionAutoTriggerEditForm', 'Please enter a name.')
-            )
-            return
         if not button_id:
             QtWidgets.QMessageBox.warning(
                 self,
@@ -464,7 +460,6 @@ class CompanionManager(QtWidgets.QWidget):
         self._update_icons()
         self._hook_live_controller()
         self._hook_service_manager()
-        QtCore.QTimer.singleShot(0, self._auto_connect_default)
 
     @staticmethod
     def _trace(message):
@@ -647,6 +642,19 @@ class CompanionManager(QtWidgets.QWidget):
         self.settings.setValue('companion/autotrigger enabled', self.autotrigger_enabled)
         self._refresh_live_autotrigger_markers()
 
+    def _get_auto_connect_on_file_open(self):
+        value = self.settings.value('companion/auto connect default on file open')
+        return self._to_bool(value, default=True)
+
+    def _apply_autotrigger_mode_on_file_open(self):
+        mode = str(self.settings.value('companion/autotrigger on file open mode') or 'last').strip().lower()
+        if mode == 'on':
+            self.autotrigger_enabled = True
+            self.settings.setValue('companion/autotrigger enabled', True)
+        elif mode == 'off':
+            self.autotrigger_enabled = False
+            self.settings.setValue('companion/autotrigger enabled', False)
+
     def _refresh_companion_list(self):
         self.companion_list_widget.clear()
         selected_row = None
@@ -692,27 +700,47 @@ class CompanionManager(QtWidgets.QWidget):
             self._update_icons()
             return
         for trigger in companion.get('autotriggers', []):
-            mode = trigger.get('mode', AUTO_TRIGGER_ENTER_PRESS)
-            mode_text = {
-                AUTO_TRIGGER_ENTER_PRESS: translate('OpenLP.CompanionManager', 'On Enter: PRESS'),
-                AUTO_TRIGGER_LEAVE_PRESS: translate('OpenLP.CompanionManager', 'On Leave: PRESS'),
-                AUTO_TRIGGER_HOLD: translate('OpenLP.CompanionManager', 'On Enter: DOWN, On Leave: UP')
-            }.get(mode, mode)
-            item_name = self._resolve_service_item_name(
-                str(trigger.get('item_ref', '') or ''),
-                str(trigger.get('item_id', '') or '')
-            ) or \
-                translate('OpenLP.CompanionManager', 'Not exist')
-            item_text = '{name} | Item {item_name} Slide {slide} | {mode}'.format(
-                name=trigger.get('name', ''),
-                item_name=item_name,
-                slide=trigger.get('slide_row', 0),
-                mode=mode_text)
-            item = QtWidgets.QListWidgetItem(item_text)
+            item = QtWidgets.QListWidgetItem(self._format_autotrigger_text(trigger))
             item.setData(QtCore.Qt.ItemDataRole.UserRole, trigger.get('id'))
             self.auto_trigger_list_widget.addItem(item)
         if self.auto_trigger_list_widget.count():
             self.auto_trigger_list_widget.setCurrentRow(0)
+
+    def _refresh_autotrigger_list_labels(self):
+        companion = self._get_selected_companion()
+        if not companion:
+            return
+        trigger_by_id = {trigger.get('id'): trigger for trigger in companion.get('autotriggers', [])}
+        self.auto_trigger_list_widget.blockSignals(True)
+        try:
+            for index in range(self.auto_trigger_list_widget.count()):
+                item = self.auto_trigger_list_widget.item(index)
+                if item is None:
+                    continue
+                trigger_id = item.data(QtCore.Qt.ItemDataRole.UserRole)
+                trigger = trigger_by_id.get(trigger_id)
+                if trigger:
+                    item.setText(self._format_autotrigger_text(trigger))
+        finally:
+            self.auto_trigger_list_widget.blockSignals(False)
+
+    def _format_autotrigger_text(self, trigger):
+        mode = trigger.get('mode', AUTO_TRIGGER_ENTER_PRESS)
+        mode_text = {
+            AUTO_TRIGGER_ENTER_PRESS: translate('OpenLP.CompanionManager', 'On Enter: PRESS'),
+            AUTO_TRIGGER_LEAVE_PRESS: translate('OpenLP.CompanionManager', 'On Leave: PRESS'),
+            AUTO_TRIGGER_HOLD: translate('OpenLP.CompanionManager', 'On Enter: DOWN, On Leave: UP')
+        }.get(mode, mode)
+        item_name = self._resolve_service_item_name(
+            str(trigger.get('item_ref', '') or ''),
+            str(trigger.get('item_id', '') or '')
+        ) or \
+            translate('OpenLP.CompanionManager', 'Not exist')
+        return '{name} | Item {item_name} Slide {slide} | {mode}'.format(
+            name=trigger.get('name', ''),
+            item_name=item_name,
+            slide=trigger.get('slide_row', 0),
+            mode=mode_text)
 
     def _format_companion_name(self, companion):
         companion_id = companion.get('id')
@@ -1004,7 +1032,8 @@ class CompanionManager(QtWidgets.QWidget):
             return
         dialog = CompanionAutoTriggerEditForm(self)
         if dialog.exec(buttons=companion.get('buttons', []),
-                       item_name_resolver=self._resolve_service_item_name) != QtWidgets.QDialog.DialogCode.Accepted:
+                       item_name_resolver=self._resolve_service_item_name,
+                       preferred_button_id=button.get('id')) != QtWidgets.QDialog.DialogCode.Accepted:
             return
         companion.setdefault('autotriggers', [])
         companion['autotriggers'].append(dialog.trigger_data)
@@ -1240,7 +1269,7 @@ class CompanionManager(QtWidgets.QWidget):
         self._set_status(companion_id, STATUS_ERROR)
 
     def _auto_connect_default(self):
-        if not self.settings.value('companion/auto connect default on startup'):
+        if not self._get_auto_connect_on_file_open():
             self._trace('auto-connect skipped: setting disabled')
             return
         if not self.default_companion_id:
@@ -1304,13 +1333,16 @@ class CompanionManager(QtWidgets.QWidget):
         config = results[0] if results else None
         signature = self._config_signature(config if isinstance(config, dict) else {})
         if signature == self._last_service_config_signature:
+            self._refresh_autotrigger_list_labels()
             return
         current_selection = self.selected_companion_id
         self._load_companions()
+        self._apply_autotrigger_mode_on_file_open()
         self.selected_companion_id = current_selection
         self._refresh_companion_list()
         self._update_icons()
         self._refresh_live_autotrigger_markers()
+        self._auto_connect_default()
 
     def _current_live_slide_key(self):
         controller = self.live_controller or Registry().get('live_controller')
@@ -1326,10 +1358,12 @@ class CompanionManager(QtWidgets.QWidget):
         new_key = self._current_live_slide_key()
         if new_key == self._last_live_slide_key:
             self._refresh_live_autotrigger_markers()
+            self._refresh_autotrigger_list_labels()
             return
         old_key = self._last_live_slide_key
         self._last_live_slide_key = new_key
         self._refresh_live_autotrigger_markers()
+        self._refresh_autotrigger_list_labels()
         if old_key is not None:
             self._run_autotriggers(old_key[0], old_key[1], old_key[2], on_enter=False)
         if new_key is not None:
@@ -1460,3 +1494,10 @@ class CompanionManager(QtWidgets.QWidget):
             if source == 'manual':
                 self._show_inline_message(message)
         reply.deleteLater()
+    @staticmethod
+    def _to_bool(value, default=False):
+        if value is None:
+            return default
+        if isinstance(value, str):
+            return value.strip().lower() in ('1', 'true', 'yes', 'on')
+        return bool(value)
