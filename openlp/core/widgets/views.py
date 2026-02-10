@@ -79,6 +79,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
     :param screen_ratio:
     """
     resize_event = QtCore.Signal()
+    _base_text_role = QtCore.Qt.ItemDataRole.UserRole + 100
 
     def __init__(self, parent, screen_ratio):
         """
@@ -106,6 +107,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         self.service_item = ServiceItem()
         self.screen_ratio = screen_ratio
         self.auto_row_height = 100
+        self.row_markers = {}
         # Connect signals
         self.verticalHeader().sectionResized.connect(self.row_resized)
 
@@ -174,6 +176,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         """
         self.setRowCount(0)
         self.clear()
+        self.row_markers = {}
 
     def replace_service_item(self, service_item, width, slide_number):
         """
@@ -203,6 +206,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                 else:
                     row += 1
                 item.setText(slide['text'])
+                item.setData(self._base_text_role, slide['text'])
             else:
                 label = QtWidgets.QLabel()
                 label.setContentsMargins(4, 4, 4, 4)
@@ -241,6 +245,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                         slide_height = min(slide_height, self.auto_row_height)
                 self.setCellWidget(slide_index, 0, container)
                 row += 1
+                item.setData(self._base_text_role, '')
             text.append(str(row))
             self.setItem(slide_index, 0, item)
             if slide_height:
@@ -252,7 +257,61 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         if self.service_item.is_text():
             self.resizeRowsToContents()
         self.setColumnWidth(0, self.viewport().width())
+        self._apply_row_markers()
         self.change_slide(slide_number)
+
+    def set_row_markers(self, row_markers):
+        """
+        Set row annotations for the current list. Keys are row indexes, values are labels for that row.
+        """
+        normalized = {}
+        if isinstance(row_markers, dict):
+            for key, value in row_markers.items():
+                try:
+                    row = int(key)
+                except (TypeError, ValueError):
+                    continue
+                if row < 0:
+                    continue
+                labels = []
+                if isinstance(value, str):
+                    labels = [value] if value else []
+                elif isinstance(value, (list, tuple, set)):
+                    labels = [str(item) for item in value if item]
+                if labels:
+                    normalized[row] = labels
+        self.row_markers = normalized
+        self._apply_row_markers()
+
+    def _apply_row_markers(self):
+        marker_background = QtGui.QColor('#FFF3CD')
+        marker_foreground = QtGui.QColor('#4E342E')
+        for row in range(self.slide_count()):
+            item = self.item(row, 0)
+            if item is None:
+                continue
+            markers = self.row_markers.get(row, [])
+            if markers:
+                marker_text = ', '.join(markers)
+                if self.service_item.is_text():
+                    base_text = item.data(self._base_text_role) or item.text() or ''
+                    item.setText('{base}  [Auto: {markers}]'.format(base=base_text, markers=marker_text))
+                item.setBackground(QtGui.QBrush(marker_background))
+                item.setForeground(QtGui.QBrush(marker_foreground))
+                item.setToolTip('Auto trigger: {markers}'.format(markers=marker_text))
+                widget = self.cellWidget(row, 0)
+                if widget:
+                    widget.setStyleSheet('background-color: #FFF3CD;')
+            else:
+                if self.service_item.is_text():
+                    base_text = item.data(self._base_text_role) or item.text() or ''
+                    item.setText(base_text)
+                item.setBackground(QtGui.QBrush(QtCore.Qt.GlobalColor.transparent))
+                item.setForeground(QtGui.QBrush())
+                item.setToolTip('')
+                widget = self.cellWidget(row, 0)
+                if widget:
+                    widget.setStyleSheet('')
 
     def change_slide(self, slide):
         """

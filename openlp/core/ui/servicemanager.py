@@ -26,6 +26,7 @@ import json
 import shutil
 import os
 import zipfile
+import copy
 from contextlib import suppress
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -334,6 +335,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self.list_double_clicked = False
         self.servicefile_version = None
         self.tree_widget_items = []
+        self.companion_config = {
+            'companions': [],
+            'default_companion_id': ''
+        }
         # repaint_service_list debouncer
         self.repaint_service_list_timer = QtCore.QTimer(self)
         self.repaint_service_list_timer.setInterval(100)
@@ -362,6 +367,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         Registry().register_function('theme_change_global', self.regenerate_service_items)
         Registry().register_function('theme_change_service', self.regenerate_changed_service_items)
         Registry().register_function('mediaitem_suffix_reset', self.reset_supported_suffixes)
+        Registry().register_function('service_get_companion_config', self.get_companion_config)
+        Registry().register_function('service_set_companion_config', self.set_companion_config)
 
     def bootstrap_post_set_up(self):
         """
@@ -560,6 +567,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         self.service_manager_list.clear()
         self.service_items = []
         self.set_file_name(None)
+        self.companion_config = {
+            'companions': [],
+            'default_companion_id': ''
+        }
         self.service_id += 1
         self.set_modified(False)
         self.settings.setValue('servicemanager/last file', None)
@@ -582,10 +593,34 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         core = {
             'lite-service': self._save_lite,
             'service-theme': self.service_theme,
-            'openlp-servicefile-version': 3
+            'openlp-servicefile-version': 3,
+            'companion': self.companion_config
         }
         service.append({'openlp_core': core})
         return service
+
+    def get_companion_config(self):
+        """
+        Return companion config stored in the current service payload.
+        """
+        return copy.deepcopy(self.companion_config)
+
+    def set_companion_config(self, config, modified=True):
+        """
+        Update companion config for the current service payload.
+
+        :param config: Dictionary of companion config
+        :param modified: Mark service as modified when config changes
+        """
+        config = config if isinstance(config, dict) else {}
+        cleaned = {
+            'companions': config.get('companions', []),
+            'default_companion_id': config.get('default_companion_id', '')
+        }
+        if cleaned != self.companion_config:
+            self.companion_config = cleaned
+            if modified:
+                self.set_modified()
 
     def get_write_file_list(self):
         """
@@ -899,6 +934,10 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             if 'openlp_core' in item:
                 item = item['openlp_core']
                 self._save_lite = item.get('lite-service', False)
+                self.companion_config = item.get('companion', {
+                    'companions': [],
+                    'default_companion_id': ''
+                })
                 if theme := item.get('service-theme', None):
                     find_and_set_in_combo_box(self.theme_combo_box, theme, set_missing=False)
                     if theme == self.theme_combo_box.currentText():

@@ -252,6 +252,9 @@ class CompanionAutoTriggerEditForm(QtWidgets.QDialog):
         self.setModal(True)
         self.trigger_data = None
         self._buttons = []
+        self._item_name_resolver = None
+        self._item_ref = ''
+        self._item_id = ''
         self._setup_ui()
 
     def _setup_ui(self):
@@ -281,7 +284,7 @@ class CompanionAutoTriggerEditForm(QtWidgets.QDialog):
         layout.addWidget(self.type_label, 2, 0)
         layout.addWidget(self.type_combo, 2, 1, 1, 2)
 
-        self.item_label = QtWidgets.QLabel(translate('OpenLP.CompanionAutoTriggerEditForm', 'Service Item ID:'), self)
+        self.item_label = QtWidgets.QLabel(translate('OpenLP.CompanionAutoTriggerEditForm', 'Service Item Key:'), self)
         self.item_text = QtWidgets.QLineEdit(self)
         self.item_text.setReadOnly(True)
         layout.addWidget(self.item_label, 3, 0)
@@ -291,21 +294,29 @@ class CompanionAutoTriggerEditForm(QtWidgets.QDialog):
         self.capture_button.clicked.connect(self.on_capture_slide)
         layout.addWidget(self.capture_button, 3, 2)
 
+        self.item_name_label = QtWidgets.QLabel(translate('OpenLP.CompanionAutoTriggerEditForm', 'Service Item Name:'),
+                                                self)
+        self.item_name_text = QtWidgets.QLineEdit(self)
+        self.item_name_text.setReadOnly(True)
+        layout.addWidget(self.item_name_label, 4, 0)
+        layout.addWidget(self.item_name_text, 4, 1, 1, 2)
+
         self.slide_label = QtWidgets.QLabel(translate('OpenLP.CompanionAutoTriggerEditForm', 'Slide Row:'), self)
         self.slide_spin = QtWidgets.QSpinBox(self)
         self.slide_spin.setRange(0, 10000)
-        layout.addWidget(self.slide_label, 4, 0)
-        layout.addWidget(self.slide_spin, 4, 1, 1, 2)
+        layout.addWidget(self.slide_label, 5, 0)
+        layout.addWidget(self.slide_spin, 5, 1, 1, 2)
 
         self.button_box = QtWidgets.QDialogButtonBox(self)
         self.button_box.setStandardButtons(QtWidgets.QDialogButtonBox.StandardButton.Cancel |
                                            QtWidgets.QDialogButtonBox.StandardButton.Save)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
-        layout.addWidget(self.button_box, 5, 0, 1, 3)
+        layout.addWidget(self.button_box, 6, 0, 1, 3)
 
-    def exec(self, buttons, trigger_data=None):
+    def exec(self, buttons, trigger_data=None, item_name_resolver=None):
         self._buttons = list(buttons or [])
+        self._item_name_resolver = item_name_resolver
         self.button_combo.clear()
         for button in self._buttons:
             label = '{name} ({page}/{row}/{column})'.format(name=button.get('name', ''),
@@ -322,31 +333,75 @@ class CompanionAutoTriggerEditForm(QtWidgets.QDialog):
             type_index = self.type_combo.findData(trigger_data.get('mode', AUTO_TRIGGER_ENTER_PRESS))
             if type_index >= 0:
                 self.type_combo.setCurrentIndex(type_index)
-            self.item_text.setText(str(trigger_data.get('item_id', '')))
+            self._item_ref = str(trigger_data.get('item_ref', '') or '')
+            self._item_id = str(trigger_data.get('item_id', '') or '')
+            self.item_text.setText(self._item_ref or self._item_id)
+            self._update_item_name_text()
             self.slide_spin.setValue(int(trigger_data.get('slide_row', 0)))
             self.setWindowTitle(translate('OpenLP.CompanionAutoTriggerEditForm', 'Edit Auto Trigger'))
         else:
             self.name_text.setText('')
+            self._item_ref = ''
+            self._item_id = ''
             self.item_text.setText('')
+            self.item_name_text.setText(translate('OpenLP.CompanionAutoTriggerEditForm', 'Not exist'))
             self.slide_spin.setValue(0)
             self.type_combo.setCurrentIndex(0)
             self.setWindowTitle(translate('OpenLP.CompanionAutoTriggerEditForm', 'Add Auto Trigger'))
             self.on_capture_slide()
         return super().exec()
 
+    def _update_item_name_text(self):
+        item_ref = self._item_ref.strip() if isinstance(self._item_ref, str) else ''
+        item_id = self._item_id.strip() if isinstance(self._item_id, str) else ''
+        if not item_ref and not item_id:
+            self.item_name_text.setText(translate('OpenLP.CompanionAutoTriggerEditForm', 'Not exist'))
+            return
+        if callable(self._item_name_resolver):
+            name = self._item_name_resolver(item_ref, item_id)
+        else:
+            name = None
+        if name:
+            self.item_name_text.setText(str(name))
+        else:
+            self.item_name_text.setText(translate('OpenLP.CompanionAutoTriggerEditForm', 'Not exist'))
+
     def on_capture_slide(self):
         live_controller = Registry().get('live_controller')
         service_item = getattr(live_controller, 'service_item', None) if live_controller else None
         if not live_controller or not service_item:
             return
-        item_id = getattr(service_item, 'unique_identifier', '')
+        service_manager = Registry().get('service_manager')
+        item_ref = ''
+        if service_manager and hasattr(service_manager, 'service_items'):
+            item_ref = self._find_service_item_ref(service_manager, service_item)
+        self._item_ref = item_ref
+        item_id = str(getattr(service_item, 'unique_identifier', '') or '')
+        self._item_id = item_id
         row = int(getattr(live_controller, 'selected_row', 0) or 0)
-        self.item_text.setText(str(item_id))
+        self.item_text.setText(item_ref or item_id)
+        self._update_item_name_text()
         self.slide_spin.setValue(row)
+
+    @staticmethod
+    def _find_service_item_ref(service_manager, service_item):
+        for index, entry in enumerate(getattr(service_manager, 'service_items', [])):
+            candidate = entry.get('service_item') if isinstance(entry, dict) else None
+            if candidate is service_item:
+                return f'index:{index}'
+        target_id = str(getattr(service_item, 'unique_identifier', ''))
+        if not target_id:
+            return ''
+        for index, entry in enumerate(getattr(service_manager, 'service_items', [])):
+            candidate = entry.get('service_item') if isinstance(entry, dict) else None
+            if candidate and str(getattr(candidate, 'unique_identifier', '')) == target_id:
+                return f'index:{index}'
+        return ''
 
     def accept(self):
         name = self.name_text.text().strip()
-        item_id = self.item_text.text().strip()
+        item_ref = self._item_ref.strip() if isinstance(self._item_ref, str) else ''
+        item_id = self._item_id.strip() if isinstance(self._item_id, str) else ''
         button_id = self.button_combo.currentData()
         if not name:
             QtWidgets.QMessageBox.warning(
@@ -362,12 +417,12 @@ class CompanionAutoTriggerEditForm(QtWidgets.QDialog):
                 translate('OpenLP.CompanionAutoTriggerEditForm', 'Please select a button.')
             )
             return
-        if not item_id:
+        if not item_ref and not item_id:
             QtWidgets.QMessageBox.warning(
                 self,
                 translate('OpenLP.CompanionAutoTriggerEditForm', 'Invalid Input'),
                 translate('OpenLP.CompanionAutoTriggerEditForm',
-                          'Capture a live slide or manually set Service Item ID.')
+                          'Capture a live slide to set Service Item.')
             )
             return
         trigger_id = self.trigger_data.get('id') if self.trigger_data else str(uuid.uuid4())
@@ -376,6 +431,7 @@ class CompanionAutoTriggerEditForm(QtWidgets.QDialog):
             'name': name,
             'button_id': button_id,
             'mode': self.type_combo.currentData(),
+            'item_ref': item_ref,
             'item_id': item_id,
             'slide_row': int(self.slide_spin.value())
         }
@@ -397,13 +453,17 @@ class CompanionManager(QtWidgets.QWidget):
         self.connections = {}
         self.network_manager = QtNetwork.QNetworkAccessManager(self)
         self.live_controller = None
+        self.service_manager = None
         self._last_live_slide_key = None
+        self._last_service_config_signature = None
         self._disconnect_in_progress = set()
+        self._service_sync_in_progress = False
         self._setup_ui()
         self._load_companions()
         self._refresh_companion_list()
         self._update_icons()
         self._hook_live_controller()
+        self._hook_service_manager()
         QtCore.QTimer.singleShot(0, self._auto_connect_default)
 
     @staticmethod
@@ -507,22 +567,27 @@ class CompanionManager(QtWidgets.QWidget):
         self.auto_trigger_list_widget.customContextMenuRequested.connect(self.on_autotrigger_context_menu)
         self._update_button_colours()
 
-    def _load_companions(self):
-        data = self.settings.value('companion/data')
-        if not data:
-            self.companions = []
-            return
+    @staticmethod
+    def _config_signature(config):
+        if not isinstance(config, dict):
+            return ''
         try:
-            if isinstance(data, str):
-                self.companions = json.loads(data)
-            elif isinstance(data, list):
-                self.companions = data
-            else:
-                self.companions = []
+            return json.dumps(config, sort_keys=True, separators=(',', ':'))
         except (TypeError, ValueError):
-            log.exception('Unable to parse companion data from settings')
-            self.companions = []
-        self.default_companion_id = self.settings.value('companion/default id') or ''
+            return ''
+
+    def _load_companions(self):
+        config = None
+        results = Registry().execute('service_get_companion_config')
+        if results:
+            config = results[0]
+        if not isinstance(config, dict):
+            config = {'companions': [], 'default_companion_id': ''}
+        self._last_service_config_signature = self._config_signature(config)
+        old_connections = self.connections
+        new_connections = {}
+        self.companions = config.get('companions', []) or []
+        self.default_companion_id = config.get('default_companion_id', '') or ''
         enabled_value = self.settings.value('companion/autotrigger enabled')
         if isinstance(enabled_value, str):
             self.autotrigger_enabled = enabled_value.strip().lower() in ('1', 'true', 'yes', 'on')
@@ -533,7 +598,30 @@ class CompanionManager(QtWidgets.QWidget):
                 companion['id'] = str(uuid.uuid4())
             companion.setdefault('buttons', [])
             companion.setdefault('autotriggers', [])
-            self.connections[companion['id']] = self._create_connection(companion)
+            for trigger in companion.get('autotriggers', []):
+                if 'item_ref' not in trigger:
+                    trigger['item_ref'] = ''
+                if not trigger.get('item_ref') and trigger.get('item_id'):
+                    trigger['item_ref'] = self._resolve_item_ref_from_legacy_id(str(trigger.get('item_id')))
+            companion_id = companion['id']
+            old_connection = old_connections.get(companion_id)
+            if old_connection and old_connection.get('method') == companion.get('method'):
+                new_connections[companion_id] = old_connection
+            else:
+                if old_connection:
+                    self._disconnect(companion)
+                new_connections[companion_id] = self._create_connection(companion)
+        active_ids = {companion.get('id') for companion in self.companions if companion.get('id')}
+        for removed_id in list(old_connections.keys()):
+            if removed_id in active_ids:
+                continue
+            removed_connection = old_connections.get(removed_id, {})
+            removed_companion = {
+                'id': removed_id,
+                'method': removed_connection.get('method', COMPANION_METHOD_UDP)
+            }
+            self._disconnect(removed_companion)
+        self.connections = new_connections
 
     def _create_connection(self, companion):
         return {
@@ -546,9 +634,18 @@ class CompanionManager(QtWidgets.QWidget):
         }
 
     def _save_companions(self):
-        self.settings.setValue('companion/data', json.dumps(self.companions))
-        self.settings.setValue('companion/default id', self.default_companion_id)
+        if not self._service_sync_in_progress:
+            self._service_sync_in_progress = True
+            try:
+                config = {
+                    'companions': self.companions,
+                    'default_companion_id': self.default_companion_id
+                }
+                Registry().execute('service_set_companion_config', config)
+            finally:
+                self._service_sync_in_progress = False
         self.settings.setValue('companion/autotrigger enabled', self.autotrigger_enabled)
+        self._refresh_live_autotrigger_markers()
 
     def _refresh_companion_list(self):
         self.companion_list_widget.clear()
@@ -601,9 +698,14 @@ class CompanionManager(QtWidgets.QWidget):
                 AUTO_TRIGGER_LEAVE_PRESS: translate('OpenLP.CompanionManager', 'On Leave: PRESS'),
                 AUTO_TRIGGER_HOLD: translate('OpenLP.CompanionManager', 'On Enter: DOWN, On Leave: UP')
             }.get(mode, mode)
-            item_text = '{name} | Item {item_id} Slide {slide} | {mode}'.format(
+            item_name = self._resolve_service_item_name(
+                str(trigger.get('item_ref', '') or ''),
+                str(trigger.get('item_id', '') or '')
+            ) or \
+                translate('OpenLP.CompanionManager', 'Not exist')
+            item_text = '{name} | Item {item_name} Slide {slide} | {mode}'.format(
                 name=trigger.get('name', ''),
-                item_id=trigger.get('item_id', ''),
+                item_name=item_name,
                 slide=trigger.get('slide_row', 0),
                 mode=mode_text)
             item = QtWidgets.QListWidgetItem(item_text)
@@ -731,6 +833,84 @@ class CompanionManager(QtWidgets.QWidget):
         self.status_label.setText(message)
         QtCore.QTimer.singleShot(timeout_ms, self._update_status_label)
 
+    @staticmethod
+    def _resolve_service_item_name(item_ref='', item_id=''):
+        service_manager = Registry().get('service_manager')
+        if service_manager and hasattr(service_manager, 'service_items'):
+            items = getattr(service_manager, 'service_items', [])
+            if isinstance(item_ref, str) and item_ref.startswith('index:'):
+                try:
+                    index = int(item_ref.split(':', 1)[1])
+                    if 0 <= index < len(items):
+                        entry = items[index]
+                        service_item = entry.get('service_item') if isinstance(entry, dict) else None
+                        if service_item:
+                            title = getattr(service_item, 'title', None)
+                            if title:
+                                return title
+                            display_title = getattr(service_item, 'get_display_title', None)
+                            if callable(display_title):
+                                try:
+                                    return display_title()
+                                except Exception:
+                                    pass
+                            return str(index + 1)
+                except (TypeError, ValueError):
+                    pass
+            if item_id:
+                for entry in items:
+                    service_item = entry.get('service_item') if isinstance(entry, dict) else None
+                    if service_item and str(getattr(service_item, 'unique_identifier', '')) == str(item_id):
+                        title = getattr(service_item, 'title', None)
+                        if title:
+                            return title
+                        display_title = getattr(service_item, 'get_display_title', None)
+                        if callable(display_title):
+                            try:
+                                return display_title()
+                            except Exception:
+                                pass
+                        return str(item_id)
+        live_controller = Registry().get('live_controller')
+        live_item = getattr(live_controller, 'service_item', None) if live_controller else None
+        if item_id and live_item and str(getattr(live_item, 'unique_identifier', '')) == str(item_id):
+            return getattr(live_item, 'title', str(item_id))
+        return None
+
+    @staticmethod
+    def _resolve_service_item_ref(service_item):
+        if not service_item:
+            return ''
+        service_manager = Registry().get('service_manager')
+        if not service_manager or not hasattr(service_manager, 'service_items'):
+            return ''
+        items = getattr(service_manager, 'service_items', [])
+        for index, entry in enumerate(items):
+            candidate = entry.get('service_item') if isinstance(entry, dict) else None
+            if candidate is service_item:
+                return f'index:{index}'
+        target_id = str(getattr(service_item, 'unique_identifier', ''))
+        if not target_id:
+            return ''
+        for index, entry in enumerate(items):
+            candidate = entry.get('service_item') if isinstance(entry, dict) else None
+            if candidate and str(getattr(candidate, 'unique_identifier', '')) == target_id:
+                return f'index:{index}'
+        return ''
+
+    @staticmethod
+    def _resolve_item_ref_from_legacy_id(item_id):
+        if not item_id:
+            return ''
+        service_manager = Registry().get('service_manager')
+        if not service_manager or not hasattr(service_manager, 'service_items'):
+            return ''
+        for index, entry in enumerate(getattr(service_manager, 'service_items', [])):
+            service_item = entry.get('service_item') if isinstance(entry, dict) else None
+            if service_item and str(getattr(service_item, 'unique_identifier', '')) == str(item_id):
+                return f'index:{index}'
+        return ''
+
     def on_add_companion(self):
         dialog = CompanionEditForm(self)
         if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
@@ -823,7 +1003,8 @@ class CompanionManager(QtWidgets.QWidget):
         if companion is None or button is None:
             return
         dialog = CompanionAutoTriggerEditForm(self)
-        if dialog.exec(buttons=companion.get('buttons', [])) != QtWidgets.QDialog.DialogCode.Accepted:
+        if dialog.exec(buttons=companion.get('buttons', []),
+                       item_name_resolver=self._resolve_service_item_name) != QtWidgets.QDialog.DialogCode.Accepted:
             return
         companion.setdefault('autotriggers', [])
         companion['autotriggers'].append(dialog.trigger_data)
@@ -836,7 +1017,8 @@ class CompanionManager(QtWidgets.QWidget):
         if companion is None or trigger is None:
             return
         dialog = CompanionAutoTriggerEditForm(self)
-        if dialog.exec(buttons=companion.get('buttons', []), trigger_data=trigger) != \
+        if dialog.exec(buttons=companion.get('buttons', []), trigger_data=trigger,
+                       item_name_resolver=self._resolve_service_item_name) != \
                 QtWidgets.QDialog.DialogCode.Accepted:
             return
         for index, item in enumerate(companion.get('autotriggers', [])):
@@ -1072,7 +1254,13 @@ class CompanionManager(QtWidgets.QWidget):
                 break
 
     def _hook_live_controller(self):
-        controller = Registry().get('live_controller')
+        try:
+            registry = Registry()
+            if not hasattr(registry, 'service_list'):
+                return
+            controller = registry.get('live_controller')
+        except Exception:
+            return
         if controller is None:
             QtCore.QTimer.singleShot(1000, self._hook_live_controller)
             return
@@ -1086,34 +1274,117 @@ class CompanionManager(QtWidgets.QWidget):
         self.live_controller = controller
         self.live_controller.slidecontroller_changed.connect(self.on_live_output_changed)
         self._last_live_slide_key = self._current_live_slide_key()
+        self._refresh_live_autotrigger_markers()
+
+    def _hook_service_manager(self):
+        try:
+            registry = Registry()
+            if not hasattr(registry, 'service_list'):
+                return
+            manager = registry.get('service_manager')
+        except Exception:
+            return
+        if manager is None:
+            QtCore.QTimer.singleShot(1000, self._hook_service_manager)
+            return
+        if manager is self.service_manager:
+            return
+        if self.service_manager is not None:
+            try:
+                self.service_manager.servicemanager_changed.disconnect(self.on_service_manager_changed)
+            except Exception:
+                pass
+        self.service_manager = manager
+        self.service_manager.servicemanager_changed.connect(self.on_service_manager_changed)
+
+    def on_service_manager_changed(self):
+        if self._service_sync_in_progress:
+            return
+        results = Registry().execute('service_get_companion_config')
+        config = results[0] if results else None
+        signature = self._config_signature(config if isinstance(config, dict) else {})
+        if signature == self._last_service_config_signature:
+            return
+        current_selection = self.selected_companion_id
+        self._load_companions()
+        self.selected_companion_id = current_selection
+        self._refresh_companion_list()
+        self._update_icons()
+        self._refresh_live_autotrigger_markers()
 
     def _current_live_slide_key(self):
         controller = self.live_controller or Registry().get('live_controller')
         service_item = getattr(controller, 'service_item', None) if controller else None
         if controller is None or not service_item:
             return None
+        item_ref = self._resolve_service_item_ref(service_item)
         item_id = str(getattr(service_item, 'unique_identifier', ''))
         row = int(getattr(controller, 'selected_row', 0) or 0)
-        return item_id, row
+        return item_ref, item_id, row
 
     def on_live_output_changed(self, *_args):
         new_key = self._current_live_slide_key()
         if new_key == self._last_live_slide_key:
+            self._refresh_live_autotrigger_markers()
             return
         old_key = self._last_live_slide_key
         self._last_live_slide_key = new_key
+        self._refresh_live_autotrigger_markers()
         if old_key is not None:
-            self._run_autotriggers(old_key[0], old_key[1], on_enter=False)
+            self._run_autotriggers(old_key[0], old_key[1], old_key[2], on_enter=False)
         if new_key is not None:
-            self._run_autotriggers(new_key[0], new_key[1], on_enter=True)
+            self._run_autotriggers(new_key[0], new_key[1], new_key[2], on_enter=True)
 
-    def _run_autotriggers(self, item_id, slide_row, on_enter):
+    @staticmethod
+    def _trigger_matches_item(trigger, item_ref, item_id):
+        trigger_ref = str(trigger.get('item_ref', '') or '')
+        trigger_item_id = str(trigger.get('item_id', '') or '')
+        if trigger_ref and item_ref:
+            return trigger_ref == item_ref
+        return trigger_item_id == str(item_id)
+
+    def _build_live_row_markers(self):
+        markers_by_row = {}
+        if not self.autotrigger_enabled:
+            return markers_by_row
+        current_key = self._current_live_slide_key()
+        if not current_key:
+            return markers_by_row
+        item_ref, item_id, _row = current_key
+        for companion in self.companions:
+            buttons_by_id = {button.get('id'): button for button in companion.get('buttons', [])}
+            for trigger in companion.get('autotriggers', []):
+                if not self._trigger_matches_item(trigger, item_ref, item_id):
+                    continue
+                try:
+                    row = int(trigger.get('slide_row', -1))
+                except (TypeError, ValueError):
+                    continue
+                if row < 0:
+                    continue
+                button = buttons_by_id.get(trigger.get('button_id'))
+                button_name = str(button.get('name')) if button else translate('OpenLP.CompanionManager', 'Unknown')
+                markers_by_row.setdefault(row, [])
+                if button_name not in markers_by_row[row]:
+                    markers_by_row[row].append(button_name)
+        return markers_by_row
+
+    def _refresh_live_autotrigger_markers(self):
+        controller = self.live_controller or Registry().get('live_controller')
+        if controller is None or not getattr(controller, 'preview_widget', None):
+            return
+        try:
+            controller.preview_widget.set_row_markers(self._build_live_row_markers())
+        except Exception as err:
+            self._trace(f'failed to update live auto-trigger markers: {err}')
+
+    def _run_autotriggers(self, item_ref, item_id, slide_row, on_enter):
         if not self.autotrigger_enabled:
             return
         for companion in self.companions:
             buttons_by_id = {button.get('id'): button for button in companion.get('buttons', [])}
             for trigger in companion.get('autotriggers', []):
-                if str(trigger.get('item_id', '')) != str(item_id):
+                if not self._trigger_matches_item(trigger, item_ref, item_id):
                     continue
                 if int(trigger.get('slide_row', -1)) != int(slide_row):
                     continue
