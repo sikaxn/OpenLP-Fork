@@ -459,6 +459,7 @@ class CompanionManager(QtWidgets.QWidget):
         self._service_sync_in_progress = False
         self._setup_ui()
         self._load_companions()
+        self._enforce_startup_follow_reorder_default()
         self._refresh_companion_list()
         self._update_icons()
         self._hook_live_controller()
@@ -661,6 +662,14 @@ class CompanionManager(QtWidgets.QWidget):
         self.settings.setValue('companion/autotrigger enabled', self.autotrigger_enabled)
         self.settings.setValue('companion/follow service reorder', self.follow_service_reorder_enabled)
         self._refresh_live_autotrigger_markers()
+
+    def _enforce_startup_follow_reorder_default(self):
+        """
+        Force Follow Service Reorder ON when OpenLP starts.
+        """
+        self.follow_service_reorder_enabled = True
+        self.autotrigger_follow_reorder_button.setChecked(True)
+        self.settings.setValue('companion/follow service reorder', True)
 
     def _get_auto_connect_on_file_open(self):
         value = self.settings.value('companion/auto connect default on file open')
@@ -900,10 +909,13 @@ class CompanionManager(QtWidgets.QWidget):
             self.autotrigger_follow_reorder_button.setText(translate('OpenLP.CompanionManager',
                                                                      'Follow Reorder: ON'))
             self.autotrigger_follow_reorder_button.setChecked(True)
+            self.autotrigger_follow_reorder_button.setStyleSheet('')
         else:
             self.autotrigger_follow_reorder_button.setText(translate('OpenLP.CompanionManager',
                                                                      'Follow Reorder: OFF'))
             self.autotrigger_follow_reorder_button.setChecked(False)
+            self.autotrigger_follow_reorder_button.setStyleSheet(
+                'QPushButton { background-color: #C62828; color: white; }')
 
     def on_companion_selected(self, *_args):
         item = self.companion_list_widget.currentItem()
@@ -1504,24 +1516,34 @@ class CompanionManager(QtWidgets.QWidget):
         new_index_by_id = {item_id: index for index, item_id in enumerate(current_order)}
         changed = False
         for companion in self.companions:
+            updated_triggers = []
             for trigger in companion.get('autotriggers', []):
                 item_ref = str(trigger.get('item_ref', '') or '')
                 if not item_ref.startswith('index:'):
+                    updated_triggers.append(trigger)
                     continue
                 try:
                     old_index = int(item_ref.split(':', 1)[1])
                 except (TypeError, ValueError):
+                    updated_triggers.append(trigger)
                     continue
                 if old_index < 0 or old_index >= len(old_order):
+                    updated_triggers.append(trigger)
                     continue
                 old_item_id = old_order[old_index]
                 new_index = new_index_by_id.get(old_item_id)
                 if new_index is None:
+                    # Service item was deleted; remove triggers bound to it.
+                    changed = True
                     continue
                 new_ref = f'index:{new_index}'
                 if new_ref != item_ref:
                     trigger['item_ref'] = new_ref
                     changed = True
+                updated_triggers.append(trigger)
+            if len(updated_triggers) != len(companion.get('autotriggers', [])):
+                changed = True
+            companion['autotriggers'] = updated_triggers
         if changed:
             self._save_companions()
             self._refresh_autotrigger_list()
