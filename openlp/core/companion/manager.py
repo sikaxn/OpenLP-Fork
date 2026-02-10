@@ -1537,8 +1537,6 @@ class CompanionManager(QtWidgets.QWidget):
 
     def _build_live_row_markers(self):
         markers_by_row = {}
-        if not self.autotrigger_enabled:
-            return markers_by_row
         current_key = self._current_live_slide_key()
         if not current_key:
             return markers_by_row
@@ -1566,6 +1564,7 @@ class CompanionManager(QtWidgets.QWidget):
         if controller is None or not getattr(controller, 'preview_widget', None):
             return
         try:
+            controller.preview_widget.set_row_marker_colours_enabled(self.autotrigger_enabled)
             controller.preview_widget.set_row_markers(self._build_live_row_markers())
         except Exception as err:
             self._trace(f'failed to update live auto-trigger markers: {err}')

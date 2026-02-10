@@ -108,6 +108,7 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         self.screen_ratio = screen_ratio
         self.auto_row_height = 100
         self.row_markers = {}
+        self.row_marker_colours_enabled = True
         # Connect signals
         self.verticalHeader().sectionResized.connect(self.row_resized)
 
@@ -283,6 +284,13 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         self.row_markers = normalized
         self._apply_row_markers()
 
+    def set_row_marker_colours_enabled(self, enabled):
+        """
+        Enable/disable marker colours while keeping marker text visible.
+        """
+        self.row_marker_colours_enabled = bool(enabled)
+        self._apply_row_markers()
+
     def _apply_row_markers(self):
         marker_background = QtGui.QColor('#FFF3CD')
         marker_foreground = QtGui.QColor('#4E342E')
@@ -297,12 +305,18 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                     base_text_data = item.data(self._base_text_role)
                     base_text = item.text() if base_text_data is None else str(base_text_data)
                     item.setText('{base}  [Auto: {markers}]'.format(base=base_text, markers=marker_text))
-                item.setBackground(QtGui.QBrush(marker_background))
-                item.setForeground(QtGui.QBrush(marker_foreground))
                 item.setToolTip('Auto trigger: {markers}'.format(markers=marker_text))
                 widget = self.cellWidget(row, 0)
-                if widget:
-                    widget.setStyleSheet('background-color: #FFF3CD;')
+                if self.row_marker_colours_enabled:
+                    item.setBackground(QtGui.QBrush(marker_background))
+                    item.setForeground(QtGui.QBrush(marker_foreground))
+                    if widget:
+                        widget.setStyleSheet('background-color: #FFF3CD;')
+                else:
+                    item.setBackground(QtGui.QBrush(QtCore.Qt.GlobalColor.transparent))
+                    item.setForeground(QtGui.QBrush())
+                    if widget:
+                        widget.setStyleSheet('')
             else:
                 if self.service_item.is_text():
                     base_text_data = item.data(self._base_text_role)
