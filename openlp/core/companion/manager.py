@@ -447,11 +447,13 @@ class CompanionManager(QtWidgets.QWidget):
         self.default_companion_id = ''
         self.autotrigger_enabled = True
         self.filter_current_live_triggers = False
+        self.follow_service_reorder_enabled = True
         self.connections = {}
         self.network_manager = QtNetwork.QNetworkAccessManager(self)
         self.live_controller = None
         self.service_manager = None
         self._last_live_slide_key = None
+        self._last_service_item_order = []
         self._last_service_config_signature = None
         self._disconnect_in_progress = set()
         self._service_sync_in_progress = False
@@ -547,10 +549,15 @@ class CompanionManager(QtWidgets.QWidget):
             translate('OpenLP.CompanionManager', 'Filter Current Live'), self.auto_trigger_group_box)
         self.autotrigger_filter_live_button.setCheckable(True)
         self.autotrigger_filter_live_button.clicked.connect(self.on_toggle_autotrigger_filter_live)
+        self.autotrigger_follow_reorder_button = QtWidgets.QPushButton(
+            translate('OpenLP.CompanionManager', 'Follow Service Reorder'), self.auto_trigger_group_box)
+        self.autotrigger_follow_reorder_button.setCheckable(True)
+        self.autotrigger_follow_reorder_button.clicked.connect(self.on_toggle_follow_service_reorder)
         for button in [self.autotrigger_add_button, self.autotrigger_edit_button, self.autotrigger_delete_button]:
             self.auto_trigger_actions_layout.addWidget(button)
         self.auto_trigger_actions_layout.addWidget(self.autotrigger_toggle_button)
         self.auto_trigger_actions_layout.addWidget(self.autotrigger_filter_live_button)
+        self.auto_trigger_actions_layout.addWidget(self.autotrigger_follow_reorder_button)
         self.auto_trigger_layout.addLayout(self.auto_trigger_actions_layout)
         self.auto_trigger_list_widget = QtWidgets.QListWidget(self.auto_trigger_group_box)
         self.auto_trigger_list_widget.setAlternatingRowColors(True)
@@ -594,6 +601,12 @@ class CompanionManager(QtWidgets.QWidget):
             self.autotrigger_enabled = enabled_value.strip().lower() in ('1', 'true', 'yes', 'on')
         else:
             self.autotrigger_enabled = bool(enabled_value)
+        follow_reorder_value = self.settings.value('companion/follow service reorder')
+        if isinstance(follow_reorder_value, str):
+            self.follow_service_reorder_enabled = follow_reorder_value.strip().lower() in ('1', 'true', 'yes', 'on')
+        else:
+            self.follow_service_reorder_enabled = bool(follow_reorder_value)
+        self.autotrigger_follow_reorder_button.setChecked(self.follow_service_reorder_enabled)
         for companion in self.companions:
             if 'id' not in companion:
                 companion['id'] = str(uuid.uuid4())
@@ -646,6 +659,7 @@ class CompanionManager(QtWidgets.QWidget):
             finally:
                 self._service_sync_in_progress = False
         self.settings.setValue('companion/autotrigger enabled', self.autotrigger_enabled)
+        self.settings.setValue('companion/follow service reorder', self.follow_service_reorder_enabled)
         self._refresh_live_autotrigger_markers()
 
     def _get_auto_connect_on_file_open(self):
@@ -738,6 +752,36 @@ class CompanionManager(QtWidgets.QWidget):
         finally:
             self.auto_trigger_list_widget.blockSignals(False)
 
+    def _select_autotrigger_for_live_slide(self):
+        companion = self._get_selected_companion()
+        if not companion:
+            return
+        current_key = self._current_live_slide_key()
+        if not current_key:
+            return
+        item_ref, item_id, slide_row = current_key
+        trigger_by_id = {trigger.get('id'): trigger for trigger in companion.get('autotriggers', [])}
+        matched_row = None
+        for index in range(self.auto_trigger_list_widget.count()):
+            item = self.auto_trigger_list_widget.item(index)
+            if item is None or item.isHidden():
+                continue
+            trigger_id = item.data(QtCore.Qt.ItemDataRole.UserRole)
+            trigger = trigger_by_id.get(trigger_id)
+            if not trigger:
+                continue
+            if not self._trigger_matches_item(trigger, item_ref, item_id):
+                continue
+            try:
+                trigger_slide_row = int(trigger.get('slide_row', -1))
+            except (TypeError, ValueError):
+                continue
+            if trigger_slide_row == int(slide_row):
+                matched_row = index
+                break
+        if matched_row is not None:
+            self.auto_trigger_list_widget.setCurrentRow(matched_row)
+
     def _should_show_autotrigger(self, trigger):
         if not self.filter_current_live_triggers:
             return True
@@ -829,11 +873,13 @@ class CompanionManager(QtWidgets.QWidget):
         self.autotrigger_delete_button.setEnabled(has_autotrigger)
         self.autotrigger_toggle_button.setEnabled(True)
         self.autotrigger_filter_live_button.setEnabled(True)
+        self.autotrigger_follow_reorder_button.setEnabled(True)
         self._update_button_colours()
 
     def _update_button_colours(self):
         self.companion_connect_button.setStyleSheet('QPushButton { background-color: #2E7D32; color: white; }')
         self.companion_disconnect_button.setStyleSheet('QPushButton { background-color: #C62828; color: white; }')
+        self._update_toggle_button_texts()
         if self.autotrigger_enabled:
             self.autotrigger_toggle_button.setText(translate('OpenLP.CompanionManager', 'Auto Trigger: ON'))
             self.autotrigger_toggle_button.setChecked(True)
@@ -842,6 +888,22 @@ class CompanionManager(QtWidgets.QWidget):
             self.autotrigger_toggle_button.setText(translate('OpenLP.CompanionManager', 'Auto Trigger: OFF'))
             self.autotrigger_toggle_button.setChecked(False)
             self.autotrigger_toggle_button.setStyleSheet('QPushButton { background-color: #C62828; color: white; }')
+
+    def _update_toggle_button_texts(self):
+        if self.filter_current_live_triggers:
+            self.autotrigger_filter_live_button.setText(translate('OpenLP.CompanionManager', 'Show All'))
+            self.autotrigger_filter_live_button.setChecked(True)
+        else:
+            self.autotrigger_filter_live_button.setText(translate('OpenLP.CompanionManager', 'Filter Current Live'))
+            self.autotrigger_filter_live_button.setChecked(False)
+        if self.follow_service_reorder_enabled:
+            self.autotrigger_follow_reorder_button.setText(translate('OpenLP.CompanionManager',
+                                                                     'Follow Reorder: ON'))
+            self.autotrigger_follow_reorder_button.setChecked(True)
+        else:
+            self.autotrigger_follow_reorder_button.setText(translate('OpenLP.CompanionManager',
+                                                                     'Follow Reorder: OFF'))
+            self.autotrigger_follow_reorder_button.setChecked(False)
 
     def on_companion_selected(self, *_args):
         item = self.companion_list_widget.currentItem()
@@ -1166,7 +1228,13 @@ class CompanionManager(QtWidgets.QWidget):
 
     def on_toggle_autotrigger_filter_live(self):
         self.filter_current_live_triggers = bool(self.autotrigger_filter_live_button.isChecked())
+        self._update_toggle_button_texts()
         self._refresh_autotrigger_list()
+
+    def on_toggle_follow_service_reorder(self):
+        self.follow_service_reorder_enabled = bool(self.autotrigger_follow_reorder_button.isChecked())
+        self._update_toggle_button_texts()
+        self._save_companions()
 
     def _set_status(self, companion_id, status, error=''):
         if companion_id not in self.connections:
@@ -1352,10 +1420,12 @@ class CompanionManager(QtWidgets.QWidget):
                 pass
         self.service_manager = manager
         self.service_manager.servicemanager_changed.connect(self.on_service_manager_changed)
+        self._last_service_item_order = self._get_service_item_order()
 
     def on_service_manager_changed(self):
         if self._service_sync_in_progress:
             return
+        self._sync_autotrigger_refs_with_service_reorder()
         results = Registry().execute('service_get_companion_config')
         config = results[0] if results else None
         signature = self._config_signature(config if isinstance(config, dict) else {})
@@ -1389,6 +1459,7 @@ class CompanionManager(QtWidgets.QWidget):
                 self._refresh_autotrigger_list()
             else:
                 self._refresh_autotrigger_list_labels()
+            self._select_autotrigger_for_live_slide()
             return
         old_key = self._last_live_slide_key
         self._last_live_slide_key = new_key
@@ -1397,6 +1468,7 @@ class CompanionManager(QtWidgets.QWidget):
             self._refresh_autotrigger_list()
         else:
             self._refresh_autotrigger_list_labels()
+        self._select_autotrigger_for_live_slide()
         service_item_changed = bool(
             old_key is not None and new_key is not None and (old_key[0] != new_key[0] or old_key[1] != new_key[1])
         )
@@ -1405,6 +1477,55 @@ class CompanionManager(QtWidgets.QWidget):
         if new_key is not None:
             self._run_autotriggers(new_key[0], new_key[1], new_key[2], on_enter=True,
                                    service_item_changed=service_item_changed)
+
+    def _get_service_item_order(self):
+        manager = self.service_manager or Registry().get('service_manager')
+        if not manager or not hasattr(manager, 'service_items'):
+            return []
+        ordered_ids = []
+        for entry in getattr(manager, 'service_items', []):
+            service_item = entry.get('service_item') if isinstance(entry, dict) else None
+            if not service_item:
+                continue
+            ordered_ids.append(str(getattr(service_item, 'unique_identifier', '') or ''))
+        return ordered_ids
+
+    def _sync_autotrigger_refs_with_service_reorder(self):
+        current_order = self._get_service_item_order()
+        if not current_order:
+            self._last_service_item_order = current_order
+            return
+        old_order = list(self._last_service_item_order or [])
+        self._last_service_item_order = current_order
+        if not self.follow_service_reorder_enabled:
+            return
+        if not old_order or old_order == current_order:
+            return
+        new_index_by_id = {item_id: index for index, item_id in enumerate(current_order)}
+        changed = False
+        for companion in self.companions:
+            for trigger in companion.get('autotriggers', []):
+                item_ref = str(trigger.get('item_ref', '') or '')
+                if not item_ref.startswith('index:'):
+                    continue
+                try:
+                    old_index = int(item_ref.split(':', 1)[1])
+                except (TypeError, ValueError):
+                    continue
+                if old_index < 0 or old_index >= len(old_order):
+                    continue
+                old_item_id = old_order[old_index]
+                new_index = new_index_by_id.get(old_item_id)
+                if new_index is None:
+                    continue
+                new_ref = f'index:{new_index}'
+                if new_ref != item_ref:
+                    trigger['item_ref'] = new_ref
+                    changed = True
+        if changed:
+            self._save_companions()
+            self._refresh_autotrigger_list()
+            self._refresh_live_autotrigger_markers()
 
     @staticmethod
     def _trigger_matches_item(trigger, item_ref, item_id):
