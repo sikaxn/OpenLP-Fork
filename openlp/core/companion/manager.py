@@ -1513,6 +1513,12 @@ class CompanionManager(QtWidgets.QWidget):
             return
         if not old_order or old_order == current_order:
             return
+        common_ids = set(old_order).intersection(set(current_order))
+        # Service reloads can regenerate unique ids; avoid destructive remap/delete in that case.
+        minimum_expected_overlap = max(1, min(len(old_order), len(current_order)) // 2)
+        if len(common_ids) < minimum_expected_overlap:
+            self._trace('skip follow-reorder sync due to low service item id overlap')
+            return
         new_index_by_id = {item_id: index for index, item_id in enumerate(current_order)}
         changed = False
         for companion in self.companions:
