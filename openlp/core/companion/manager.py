@@ -446,6 +446,7 @@ class CompanionManager(QtWidgets.QWidget):
         self.selected_companion_id = None
         self.default_companion_id = ''
         self.autotrigger_enabled = True
+        self.filter_current_live_triggers = False
         self.connections = {}
         self.network_manager = QtNetwork.QNetworkAccessManager(self)
         self.live_controller = None
@@ -542,9 +543,14 @@ class CompanionManager(QtWidgets.QWidget):
         self.autotrigger_toggle_button = QtWidgets.QPushButton(self.auto_trigger_group_box)
         self.autotrigger_toggle_button.clicked.connect(self.on_toggle_autotrigger_enabled)
         self.autotrigger_toggle_button.setCheckable(True)
+        self.autotrigger_filter_live_button = QtWidgets.QPushButton(
+            translate('OpenLP.CompanionManager', 'Filter Current Live'), self.auto_trigger_group_box)
+        self.autotrigger_filter_live_button.setCheckable(True)
+        self.autotrigger_filter_live_button.clicked.connect(self.on_toggle_autotrigger_filter_live)
         for button in [self.autotrigger_add_button, self.autotrigger_edit_button, self.autotrigger_delete_button]:
             self.auto_trigger_actions_layout.addWidget(button)
         self.auto_trigger_actions_layout.addWidget(self.autotrigger_toggle_button)
+        self.auto_trigger_actions_layout.addWidget(self.autotrigger_filter_live_button)
         self.auto_trigger_layout.addLayout(self.auto_trigger_actions_layout)
         self.auto_trigger_list_widget = QtWidgets.QListWidget(self.auto_trigger_group_box)
         self.auto_trigger_list_widget.setAlternatingRowColors(True)
@@ -700,6 +706,8 @@ class CompanionManager(QtWidgets.QWidget):
             self._update_icons()
             return
         for trigger in companion.get('autotriggers', []):
+            if not self._should_show_autotrigger(trigger):
+                continue
             item = QtWidgets.QListWidgetItem(self._format_autotrigger_text(trigger))
             item.setData(QtCore.Qt.ItemDataRole.UserRole, trigger.get('id'))
             self.auto_trigger_list_widget.addItem(item)
@@ -719,10 +727,21 @@ class CompanionManager(QtWidgets.QWidget):
                     continue
                 trigger_id = item.data(QtCore.Qt.ItemDataRole.UserRole)
                 trigger = trigger_by_id.get(trigger_id)
-                if trigger:
+                if trigger and self._should_show_autotrigger(trigger):
+                    item.setHidden(False)
                     item.setText(self._format_autotrigger_text(trigger))
+                else:
+                    item.setHidden(True)
         finally:
             self.auto_trigger_list_widget.blockSignals(False)
+
+    def _should_show_autotrigger(self, trigger):
+        if not self.filter_current_live_triggers:
+            return True
+        current_key = self._current_live_slide_key()
+        if not current_key:
+            return False
+        return self._trigger_matches_item(trigger, current_key[0], current_key[1])
 
     def _format_autotrigger_text(self, trigger):
         mode = trigger.get('mode', AUTO_TRIGGER_ENTER_PRESS)
@@ -806,6 +825,7 @@ class CompanionManager(QtWidgets.QWidget):
         self.autotrigger_edit_button.setEnabled(has_autotrigger)
         self.autotrigger_delete_button.setEnabled(has_autotrigger)
         self.autotrigger_toggle_button.setEnabled(True)
+        self.autotrigger_filter_live_button.setEnabled(True)
         self._update_button_colours()
 
     def _update_button_colours(self):
@@ -1141,6 +1161,10 @@ class CompanionManager(QtWidgets.QWidget):
         self._show_inline_message(translate('OpenLP.CompanionManager', 'Auto Trigger is now {state}.').format(
             state=status))
 
+    def on_toggle_autotrigger_filter_live(self):
+        self.filter_current_live_triggers = bool(self.autotrigger_filter_live_button.isChecked())
+        self._refresh_autotrigger_list()
+
     def _set_status(self, companion_id, status, error=''):
         if companion_id not in self.connections:
             return
@@ -1358,12 +1382,18 @@ class CompanionManager(QtWidgets.QWidget):
         new_key = self._current_live_slide_key()
         if new_key == self._last_live_slide_key:
             self._refresh_live_autotrigger_markers()
-            self._refresh_autotrigger_list_labels()
+            if self.filter_current_live_triggers:
+                self._refresh_autotrigger_list()
+            else:
+                self._refresh_autotrigger_list_labels()
             return
         old_key = self._last_live_slide_key
         self._last_live_slide_key = new_key
         self._refresh_live_autotrigger_markers()
-        self._refresh_autotrigger_list_labels()
+        if self.filter_current_live_triggers:
+            self._refresh_autotrigger_list()
+        else:
+            self._refresh_autotrigger_list_labels()
         if old_key is not None:
             self._run_autotriggers(old_key[0], old_key[1], old_key[2], on_enter=False)
         if new_key is not None:

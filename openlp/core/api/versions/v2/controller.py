@@ -36,6 +36,54 @@ controller_views = Blueprint('controller', __name__)
 log = logging.getLogger(__name__)
 
 
+def _get_companion_manager():
+    """
+    Get the active Companion manager widget from the main window registry.
+
+    :return: Companion manager instance.
+    """
+    main_window = Registry().get('main_window')
+    manager = getattr(main_window, 'companion_manager_contents', None) if main_window else None
+    if manager is None:
+        log.error('Companion manager is not available')
+        abort(503)
+    return manager
+
+
+def _find_companion(manager, companion_id):
+    """
+    Resolve a companion record by id.
+
+    :param manager: Companion manager instance.
+    :param companion_id: Companion id string.
+    :return: Companion dictionary or None.
+    """
+    for companion in getattr(manager, 'companions', []):
+        if str(companion.get('id', '')) == str(companion_id):
+            return companion
+    return None
+
+
+def _to_bool(value):
+    """
+    Convert common payload values to boolean.
+
+    :param value: Raw payload value.
+    :return: Parsed bool or None if invalid.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in ('1', 'true', 'yes', 'on'):
+            return True
+        if lowered in ('0', 'false', 'no', 'off'):
+            return False
+    return None
+
+
 @controller_views.route('/live-items')
 def controller_live_items():
     """
@@ -368,3 +416,206 @@ def controller_clear(controller):
         getattr(Registry().get(f'{controller}_controller'), f'slidecontroller_{controller}_clear').emit()
         return '', 204
     return '', 404
+
+
+@controller_views.route('/companion-connection-status', methods=['GET'])
+def companion_connection_status():
+    """
+    Return all configured companion servers and their current connection status.
+    """
+    log.debug('controller-v2-companion-connection-status-get')
+    manager = _get_companion_manager()
+    companions = []
+    for companion in getattr(manager, 'companions', []):
+        companion_id = companion.get('id', '')
+        connection = manager.connections.get(companion_id, {})
+        companions.append({
+            'id': str(companion_id),
+            'ip': str(companion.get('ip', '')),
+            'port': int(companion.get('port', 0) or 0),
+            'method': str(companion.get('method', '')).upper(),
+            'status': str(connection.get('status', 'Disconnected')),
+            'default': bool(companion_id == manager.default_companion_id),
+            'connected': bool(manager._is_connected(companion))
+        })
+    return jsonify({
+        'companions': companions,
+        'selected_companion_id': getattr(manager, 'selected_companion_id', None)
+    })
+
+
+@controller_views.route('/companion-connection', methods=['POST'])
+@login_required
+def companion_connection():
+    """
+    Connect or disconnect a configured companion server.
+    """
+    log.debug('controller-v2-companion-connection-post')
+    data = request.json
+    if not data:
+        log.error('Missing request data')
+        abort(400)
+    companion_id = data.get('id') or data.get('companion_id')
+    action = str(data.get('action', '')).strip().lower()
+    if not companion_id or action not in ('connect', 'disconnect'):
+        log.error('Invalid companion connection payload: %s', data)
+        abort(400)
+    manager = _get_companion_manager()
+    companion = _find_companion(manager, companion_id)
+    if companion is None:
+        log.error('Unknown companion id: %s', companion_id)
+        abort(404)
+    if action == 'connect':
+        manager._connect(companion)
+    else:
+        manager._disconnect(companion)
+        manager._set_status(companion.get('id'), 'Disconnected')
+    return '', 204
+
+
+@controller_views.route('/companion-autotrigger-status', methods=['GET'])
+def companion_autotrigger_status():
+    """
+    Return current companion auto-trigger state.
+    """
+    log.debug('controller-v2-companion-autotrigger-status-get')
+    manager = _get_companion_manager()
+    return jsonify({'enabled': bool(getattr(manager, 'autotrigger_enabled', False))})
+
+
+@controller_views.route('/companion-autotrigger', methods=['POST'])
+@login_required
+def companion_autotrigger():
+    """
+    Toggle companion auto-trigger on or off.
+    """
+    log.debug('controller-v2-companion-autotrigger-post')
+    data = request.json
+    if not data:
+        log.error('Missing request data')
+        abort(400)
+    manager = _get_companion_manager()
+    enabled = _to_bool(data.get('enabled'))
+    if enabled is None:
+        action = str(data.get('action', '')).strip().lower()
+        if action in ('toggle',):
+            enabled = not bool(manager.autotrigger_enabled)
+        elif action in ('on', 'enable', 'enabled'):
+            enabled = True
+        elif action in ('off', 'disable', 'disabled'):
+            enabled = False
+        else:
+            log.error('Invalid companion auto-trigger payload: %s', data)
+            abort(400)
+    manager.autotrigger_enabled = bool(enabled)
+    manager._save_companions()
+    manager._update_button_colours()
+    manager._refresh_live_autotrigger_markers()
+    manager._refresh_autotrigger_list_labels()
+    return '', 204
+
+
+@controller_views.route('/companion', methods=['GET'])
+def companion_control_page():
+    """
+    Serve a simple web UI for companion connect/disconnect and auto-trigger control.
+    """
+    log.debug('controller-v2-companion-page-get')
+    html = """<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OpenLP Companion Control</title>
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    .row { margin-bottom: 10px; }
+    button { margin-right: 6px; }
+    select, input { min-width: 280px; }
+    #status { margin-top: 16px; white-space: pre-wrap; font-family: monospace; }
+  </style>
+</head>
+<body>
+  <h2>Companion Control</h2>
+  <div class="row">
+    <label for="token">Auth Token (optional)</label><br>
+    <input id="token" type="text" placeholder="Only needed if API auth is enabled">
+  </div>
+  <div class="row">
+    <label for="companions">Companion Server</label><br>
+    <select id="companions"></select>
+  </div>
+  <div class="row">
+    <button id="refresh">Refresh</button>
+    <button id="connect">Connect</button>
+    <button id="disconnect">Disconnect</button>
+  </div>
+  <div class="row">
+    <strong>Auto Trigger:</strong>
+    <span id="autotrigger-state">Unknown</span>
+  </div>
+  <div class="row">
+    <button id="autotrigger-on">Auto Trigger ON</button>
+    <button id="autotrigger-off">Auto Trigger OFF</button>
+    <button id="autotrigger-toggle">Toggle Auto Trigger</button>
+  </div>
+  <div id="status"></div>
+  <script>
+    const companionsEl = document.getElementById('companions');
+    const statusEl = document.getElementById('status');
+    const tokenEl = document.getElementById('token');
+    const autotriggerStateEl = document.getElementById('autotrigger-state');
+
+    function headers(withJson = false) {
+      const h = {};
+      const token = tokenEl.value.trim();
+      if (token) h['Authorization'] = token;
+      if (withJson) h['Content-Type'] = 'application/json';
+      return h;
+    }
+
+    async function refreshAll() {
+      const [connRes, trigRes] = await Promise.all([
+        fetch('/api/v2/controller/companion-connection-status'),
+        fetch('/api/v2/controller/companion-autotrigger-status')
+      ]);
+      const conn = await connRes.json();
+      const trig = await trigRes.json();
+      companionsEl.innerHTML = '';
+      (conn.companions || []).forEach(c => {
+        const o = document.createElement('option');
+        o.value = c.id;
+        o.textContent = `${c.ip}:${c.port} (${c.method}) - ${c.status}${c.default ? ' [Default]' : ''}`;
+        companionsEl.appendChild(o);
+      });
+      if (conn.selected_companion_id) {
+        companionsEl.value = conn.selected_companion_id;
+      }
+      autotriggerStateEl.textContent = trig.enabled ? 'ON' : 'OFF';
+      statusEl.textContent = JSON.stringify({connection: conn, autotrigger: trig}, null, 2);
+    }
+
+    async function postJson(url, body) {
+      const res = await fetch(url, {method: 'POST', headers: headers(true), body: JSON.stringify(body)});
+      if (!res.ok) throw new Error(`${url} failed: ${res.status}`);
+      await refreshAll();
+    }
+
+    document.getElementById('refresh').addEventListener('click', refreshAll);
+    document.getElementById('connect').addEventListener('click', () =>
+      postJson('/api/v2/controller/companion-connection', {id: companionsEl.value, action: 'connect'}));
+    document.getElementById('disconnect').addEventListener('click', () =>
+      postJson('/api/v2/controller/companion-connection', {id: companionsEl.value, action: 'disconnect'}));
+    document.getElementById('autotrigger-on').addEventListener('click', () =>
+      postJson('/api/v2/controller/companion-autotrigger', {enabled: true}));
+    document.getElementById('autotrigger-off').addEventListener('click', () =>
+      postJson('/api/v2/controller/companion-autotrigger', {enabled: false}));
+    document.getElementById('autotrigger-toggle').addEventListener('click', () =>
+      postJson('/api/v2/controller/companion-autotrigger', {action: 'toggle'}));
+
+    refreshAll().catch(err => { statusEl.textContent = String(err); });
+  </script>
+</body>
+</html>
+"""
+    return Response(html, mimetype='text/html')

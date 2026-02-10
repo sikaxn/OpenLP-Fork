@@ -353,3 +353,87 @@ def test_controller_clear_live(flask_client: FlaskClient, registry: Registry, se
 def test_controller_clear_invalid(flask_client: FlaskClient, registry: Registry, settings: Settings):
     res = flask_client.post('/api/v2/controller/clear/my_screen')
     assert res.status_code == 404
+
+
+def test_companion_connection_status(flask_client: FlaskClient, registry: Registry, settings: Settings):
+    fake_manager = MagicMock()
+    fake_manager.companions = [
+        {'id': 'a', 'ip': '127.0.0.1', 'port': 51235, 'method': 'udp'},
+        {'id': 'b', 'ip': '10.0.0.2', 'port': 51234, 'method': 'tcp'}
+    ]
+    fake_manager.connections = {
+        'a': {'status': 'Armed'},
+        'b': {'status': 'Connected'}
+    }
+    fake_manager.default_companion_id = 'a'
+    fake_manager.selected_companion_id = 'b'
+    fake_manager._is_connected.side_effect = lambda c: c.get('id') == 'b'
+    fake_main_window = MagicMock()
+    fake_main_window.companion_manager_contents = fake_manager
+    Registry().register('main_window', fake_main_window)
+    res = flask_client.get('/api/v2/controller/companion-connection-status')
+    assert res.status_code == 200
+    payload = res.get_json()
+    assert payload['selected_companion_id'] == 'b'
+    assert payload['companions'][0]['default'] is True
+    assert payload['companions'][1]['connected'] is True
+
+
+def test_companion_connection_post_connect(flask_client: FlaskClient, registry: Registry, settings: Settings):
+    fake_manager = MagicMock()
+    fake_manager.companions = [{'id': 'a', 'ip': '127.0.0.1', 'port': 51235, 'method': 'udp'}]
+    fake_main_window = MagicMock()
+    fake_main_window.companion_manager_contents = fake_manager
+    Registry().register('main_window', fake_main_window)
+    res = flask_client.post('/api/v2/controller/companion-connection', json={'id': 'a', 'action': 'connect'})
+    assert res.status_code == 204
+    fake_manager._connect.assert_called_once_with(fake_manager.companions[0])
+
+
+def test_companion_connection_post_disconnect(flask_client: FlaskClient, registry: Registry, settings: Settings):
+    fake_manager = MagicMock()
+    fake_manager.companions = [{'id': 'a', 'ip': '127.0.0.1', 'port': 51235, 'method': 'udp'}]
+    fake_main_window = MagicMock()
+    fake_main_window.companion_manager_contents = fake_manager
+    Registry().register('main_window', fake_main_window)
+    res = flask_client.post('/api/v2/controller/companion-connection', json={'id': 'a', 'action': 'disconnect'})
+    assert res.status_code == 204
+    fake_manager._disconnect.assert_called_once_with(fake_manager.companions[0])
+    fake_manager._set_status.assert_called_once_with('a', 'Disconnected')
+
+
+def test_companion_connection_requires_login(flask_client: FlaskClient, registry: Registry, settings: Settings):
+    settings.setValue('api/authentication enabled', True)
+    Registry().register('authentication_token', 'foobar')
+    res = flask_client.post('/api/v2/controller/companion-connection', json={'id': 'a', 'action': 'connect'})
+    settings.setValue('api/authentication enabled', False)
+    assert res.status_code == 401
+
+
+def test_companion_autotrigger_status(flask_client: FlaskClient, registry: Registry, settings: Settings):
+    fake_manager = MagicMock()
+    fake_manager.autotrigger_enabled = True
+    fake_main_window = MagicMock()
+    fake_main_window.companion_manager_contents = fake_manager
+    Registry().register('main_window', fake_main_window)
+    res = flask_client.get('/api/v2/controller/companion-autotrigger-status')
+    assert res.status_code == 200
+    assert res.get_json() == {'enabled': True}
+
+
+def test_companion_autotrigger_post(flask_client: FlaskClient, registry: Registry, settings: Settings):
+    fake_manager = MagicMock()
+    fake_manager.autotrigger_enabled = False
+    fake_main_window = MagicMock()
+    fake_main_window.companion_manager_contents = fake_manager
+    Registry().register('main_window', fake_main_window)
+    res = flask_client.post('/api/v2/controller/companion-autotrigger', json={'enabled': True})
+    assert res.status_code == 204
+    assert fake_manager.autotrigger_enabled is True
+    fake_manager._save_companions.assert_called_once()
+
+
+def test_companion_page(flask_client: FlaskClient, registry: Registry, settings: Settings):
+    res = flask_client.get('/api/v2/controller/companion')
+    assert res.status_code == 200
+    assert res.mimetype == 'text/html'

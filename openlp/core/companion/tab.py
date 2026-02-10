@@ -22,7 +22,7 @@
 The :mod:`openlp.core.companion.tab` module provides Companion settings in Configure OpenLP.
 """
 
-from PySide6 import QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from openlp.core.common.i18n import translate
 from openlp.core.lib.settingstab import SettingsTab
@@ -41,6 +41,21 @@ class CompanionTab(SettingsTab):
     def setup_ui(self):
         self.setObjectName('CompanionTab')
         super(CompanionTab, self).setup_ui()
+        self.info_group_box = QtWidgets.QGroupBox(self.left_column)
+        self.info_group_box.setObjectName('info_group_box')
+        self.info_layout = QtWidgets.QVBoxLayout(self.info_group_box)
+        self.info_layout.setObjectName('info_layout')
+        self.info_label = QtWidgets.QLabel(self.info_group_box)
+        self.info_label.setWordWrap(True)
+        self.info_label.setObjectName('info_label')
+        self.info_layout.addWidget(self.info_label)
+        self.info_link_label = QtWidgets.QLabel(self.info_group_box)
+        self.info_link_label.setOpenExternalLinks(True)
+        self.info_link_label.setTextInteractionFlags(
+            self.info_link_label.textInteractionFlags() | QtCore.Qt.TextInteractionFlag.LinksAccessibleByMouse)
+        self.info_link_label.setObjectName('info_link_label')
+        self.info_layout.addWidget(self.info_link_label)
+        self.left_layout.addWidget(self.info_group_box)
         self.connection_group_box = QtWidgets.QGroupBox(self.left_column)
         self.connection_group_box.setObjectName('connection_group_box')
         self.connection_layout = QtWidgets.QFormLayout(self.connection_group_box)
@@ -61,6 +76,13 @@ class CompanionTab(SettingsTab):
 
     def retranslate_ui(self):
         self.tab_title_visible = translate('OpenLP.CompanionTab', 'Companion')
+        self.info_group_box.setTitle(translate('OpenLP.CompanionTab', 'About Bitfocus Companion'))
+        self.info_label.setText(
+            translate('OpenLP.CompanionTab',
+                      'Use Bitfocus Companion to automate external devices and actions from OpenLP triggers.'))
+        self.info_link_label.setText(
+            translate('OpenLP.CompanionTab',
+                      '<a href="https://bitfocus.io/companion">Download Bitfocus Companion</a>'))
         self.connection_group_box.setTitle(translate('OpenLP.CompanionTab', 'Connection Options'))
         self.auto_connect_default_checkbox.setText(
             translate('OpenLP.CompanionTab', 'Auto connect default companion on file open'))
