@@ -532,7 +532,8 @@ class Settings(QtCore.QSettings):
         'companion/autotrigger on file open mode': 'last',
         'companion/first slide safety': False,
         'companion/follow service reorder': True,
-        'companion/show setup tabs': True
+        'companion/show setup tabs': True,
+        'companion/allow autotrigger auto delete': False
     }
     __file_path__ = ''
     # Settings upgrades prior to 3.0

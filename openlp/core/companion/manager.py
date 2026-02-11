@@ -460,6 +460,11 @@ class CompanionManager(QtWidgets.QWidget):
         self._last_service_config_signature = None
         self._disconnect_in_progress = set()
         self._service_sync_in_progress = False
+        self._auto_delete_scene_suspended = False
+        self._auto_delete_resume_timer = QtCore.QTimer(self)
+        self._auto_delete_resume_timer.setSingleShot(True)
+        self._auto_delete_resume_timer.setInterval(2000)
+        self._auto_delete_resume_timer.timeout.connect(self._on_scene_refresh_complete)
         self._setup_ui()
         self._load_companions()
         self._enforce_startup_follow_reorder_default()
@@ -467,11 +472,30 @@ class CompanionManager(QtWidgets.QWidget):
         self._update_icons()
         self._hook_live_controller()
         self._hook_service_manager()
+        self._register_scene_refresh_hooks()
 
     @staticmethod
     def _trace(message):
         log.debug(message)
         print(f'[Companion] {message}')
+
+    def _register_scene_refresh_hooks(self):
+        """
+        Suspend destructive auto-delete while OpenLP is regenerating service items due to scene/theme refresh.
+        """
+        registry = Registry()
+        registry.register_function('config_screen_changed', self.on_scene_refresh_started)
+        registry.register_function('theme_change_global', self.on_scene_refresh_started)
+        registry.register_function('theme_change_service', self.on_scene_refresh_started)
+
+    def on_scene_refresh_started(self):
+        self._auto_delete_scene_suspended = True
+        self._auto_delete_resume_timer.start()
+        self._trace('auto-delete temporarily suspended during scene/theme refresh')
+
+    def _on_scene_refresh_complete(self):
+        self._auto_delete_scene_suspended = False
+        self._trace('auto-delete suspension lifted after scene/theme refresh')
 
     def _setup_ui(self):
         self.layout = QtWidgets.QVBoxLayout(self)
@@ -723,6 +747,10 @@ class CompanionManager(QtWidgets.QWidget):
 
     def _first_slide_safety_enabled(self):
         return self._to_bool(self.settings.value('companion/first slide safety'), default=False)
+
+    def _allow_autotrigger_auto_delete(self):
+        return self._to_bool(self.settings.value('companion/allow autotrigger auto delete'), default=False) and \
+            not self._auto_delete_scene_suspended
 
     def _refresh_companion_list(self):
         self.companion_list_widget.clear()
@@ -1622,13 +1650,17 @@ class CompanionManager(QtWidgets.QWidget):
         if not old_order or old_order == current_order:
             return
         common_ids = set(old_order).intersection(set(current_order))
-        # Service reloads can regenerate unique ids; avoid destructive remap/delete in that case.
-        minimum_expected_overlap = max(1, min(len(old_order), len(current_order)) // 2)
-        if len(common_ids) < minimum_expected_overlap:
+        old_count = len(old_order)
+        current_count = len(current_order)
+        smaller_count = max(1, min(old_count, current_count))
+        overlap_ratio = len(common_ids) / smaller_count
+        # Service/theme rebuilds can churn runtime ids; skip remap/delete unless overlap is strong.
+        if overlap_ratio < 0.8:
             self._trace('skip follow-reorder sync due to low service item id overlap')
             return
         new_index_by_id = {item_id: index for index, item_id in enumerate(current_order)}
         changed = False
+        allow_delete_missing = current_count < old_count and self._allow_autotrigger_auto_delete()
         for companion in self.companions:
             updated_triggers = []
             for trigger in companion.get('autotriggers', []):
@@ -1647,8 +1679,12 @@ class CompanionManager(QtWidgets.QWidget):
                 old_item_id = old_order[old_index]
                 new_index = new_index_by_id.get(old_item_id)
                 if new_index is None:
-                    # Service item was deleted; remove triggers bound to it.
-                    changed = True
+                    # Delete only when service length actually shrank (real deletion),
+                    # not when ids churned during service regeneration.
+                    if allow_delete_missing:
+                        changed = True
+                        continue
+                    updated_triggers.append(trigger)
                     continue
                 new_ref = f'index:{new_index}'
                 if new_ref != item_ref:

@@ -74,6 +74,9 @@ class CompanionTab(SettingsTab):
         self.first_slide_safety_checkbox = QtWidgets.QCheckBox(self.connection_group_box)
         self.first_slide_safety_checkbox.setObjectName('first_slide_safety_checkbox')
         self.connection_layout.addRow(self.first_slide_safety_checkbox)
+        self.allow_autodelete_checkbox = QtWidgets.QCheckBox(self.connection_group_box)
+        self.allow_autodelete_checkbox.setObjectName('allow_autodelete_checkbox')
+        self.connection_layout.addRow(self.allow_autodelete_checkbox)
         self.autotrigger_open_mode_label = QtWidgets.QLabel(self.connection_group_box)
         self.autotrigger_open_mode_label.setObjectName('autotrigger_open_mode_label')
         self.autotrigger_open_mode_combo = QtWidgets.QComboBox(self.connection_group_box)
@@ -101,6 +104,9 @@ class CompanionTab(SettingsTab):
         self.first_slide_safety_checkbox.setText(
             translate('OpenLP.CompanionTab',
                       'First slide safety (do not auto-trigger first slide when selecting a new service item)'))
+        self.allow_autodelete_checkbox.setText(
+            translate('OpenLP.CompanionTab',
+                      'Allow auto-delete of triggers when linked service items are deleted'))
         self.autotrigger_open_mode_label.setText(
             translate('OpenLP.CompanionTab', 'Auto trigger on file open:'))
         self.autotrigger_open_mode_combo.setItemText(
@@ -116,6 +122,8 @@ class CompanionTab(SettingsTab):
             self._to_bool(auto_connect, default=True))
         self.first_slide_safety_checkbox.setChecked(
             self._to_bool(self.settings.value('companion/first slide safety'), default=False))
+        self.allow_autodelete_checkbox.setChecked(
+            self._to_bool(self.settings.value('companion/allow autotrigger auto delete'), default=False))
         mode = str(self.settings.value('companion/autotrigger on file open mode') or 'last').lower()
         index = self.autotrigger_open_mode_combo.findData(mode)
         if index < 0:
@@ -129,6 +137,8 @@ class CompanionTab(SettingsTab):
                                self.auto_connect_default_checkbox.isChecked())
         self.settings.setValue('companion/first slide safety',
                                self.first_slide_safety_checkbox.isChecked())
+        self.settings.setValue('companion/allow autotrigger auto delete',
+                               self.allow_autodelete_checkbox.isChecked())
         self.settings.setValue('companion/autotrigger on file open mode',
                                self.autotrigger_open_mode_combo.currentData())
 
