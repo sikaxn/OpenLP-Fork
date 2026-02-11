@@ -477,6 +477,13 @@ class CompanionManager(QtWidgets.QWidget):
         self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.setSpacing(0)
         self.layout.setContentsMargins(0, 0, 0, 0)
+        self.setup_tabs_toggle_button = QtWidgets.QPushButton(self)
+        self.setup_tabs_toggle_button.clicked.connect(self.on_toggle_setup_tabs_visibility)
+        self.layout.addWidget(self.setup_tabs_toggle_button)
+        self.setup_tabs_widget = QtWidgets.QTabWidget(self)
+        setup_tabs_visible = self.settings.value('companion/show setup tabs')
+        self.setup_tabs_widget.setVisible(self._to_bool(setup_tabs_visible, default=True))
+        self.layout.addWidget(self.setup_tabs_widget, 1)
         self.companion_group_box = QtWidgets.QGroupBox(translate('OpenLP.CompanionManager', 'Companions'), self)
         self.companion_layout = QtWidgets.QVBoxLayout(self.companion_group_box)
         self.companion_actions_layout = QtWidgets.QHBoxLayout()
@@ -506,9 +513,6 @@ class CompanionManager(QtWidgets.QWidget):
         self.companion_list_widget.setAlternatingRowColors(True)
         self.companion_list_widget.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.companion_layout.addWidget(self.companion_list_widget)
-        self.status_label = QtWidgets.QLabel('', self.companion_group_box)
-        self.companion_layout.addWidget(self.status_label)
-        self.layout.addWidget(self.companion_group_box, 1)
 
         self.button_group_box = QtWidgets.QGroupBox(translate('OpenLP.CompanionManager', 'Buttons'), self)
         self.button_layout = QtWidgets.QVBoxLayout(self.button_group_box)
@@ -532,7 +536,8 @@ class CompanionManager(QtWidgets.QWidget):
         self.button_list_widget.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.button_list_widget.itemDoubleClicked.connect(self.on_edit_button)
         self.button_layout.addWidget(self.button_list_widget)
-        self.layout.addWidget(self.button_group_box, 1)
+        self.setup_tabs_widget.addTab(self.companion_group_box, translate('OpenLP.CompanionManager', 'Companions'))
+        self.setup_tabs_widget.addTab(self.button_group_box, translate('OpenLP.CompanionManager', 'Buttons'))
 
         self.auto_trigger_group_box = QtWidgets.QGroupBox(translate('OpenLP.CompanionManager', 'Auto Triggers'), self)
         self.auto_trigger_layout = QtWidgets.QVBoxLayout(self.auto_trigger_group_box)
@@ -582,6 +587,8 @@ class CompanionManager(QtWidgets.QWidget):
                                                      QtWidgets.QSizePolicy.Policy.Fixed)
         self.auto_trigger_layout.addWidget(self.autotrigger_toggle_button)
         self.layout.addWidget(self.auto_trigger_group_box, 1)
+        self.status_label = QtWidgets.QLabel('', self)
+        self.layout.addWidget(self.status_label)
 
         self.companion_list_widget.currentItemChanged.connect(self.on_companion_selected)
         self.companion_list_widget.itemDoubleClicked.connect(self.on_edit_companion)
@@ -590,7 +597,19 @@ class CompanionManager(QtWidgets.QWidget):
         self.button_list_widget.customContextMenuRequested.connect(self.on_button_context_menu)
         self.auto_trigger_list_widget.currentItemChanged.connect(self._update_icons)
         self.auto_trigger_list_widget.customContextMenuRequested.connect(self.on_autotrigger_context_menu)
+        self._update_setup_tabs_toggle_text()
         self._update_button_colours()
+
+    def _update_setup_tabs_toggle_text(self):
+        if self.setup_tabs_widget.isVisible():
+            self.setup_tabs_toggle_button.setText(translate('OpenLP.CompanionManager', 'Hide Setup Tabs'))
+        else:
+            self.setup_tabs_toggle_button.setText(translate('OpenLP.CompanionManager', 'Show Setup Tabs'))
+
+    def on_toggle_setup_tabs_visibility(self):
+        self.setup_tabs_widget.setVisible(not self.setup_tabs_widget.isVisible())
+        self.settings.setValue('companion/show setup tabs', self.setup_tabs_widget.isVisible())
+        self._update_setup_tabs_toggle_text()
 
     @staticmethod
     def _config_signature(config):

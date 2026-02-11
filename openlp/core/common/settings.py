@@ -530,7 +530,8 @@ class Settings(QtCore.QSettings):
         'companion/auto connect default on file open': True,
         'companion/autotrigger on file open mode': 'last',
         'companion/first slide safety': False,
-        'companion/follow service reorder': True
+        'companion/follow service reorder': True,
+        'companion/show setup tabs': True
     }
     __file_path__ = ''
     # Settings upgrades prior to 3.0
