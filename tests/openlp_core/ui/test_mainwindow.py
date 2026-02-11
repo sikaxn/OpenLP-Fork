@@ -367,7 +367,7 @@ def test_mainwindow_configuration(main_window):
                              'service_manager', 'theme_manager', 'projector_manager', 'http_server',
                              'authentication_token', 'web_socket_server']
     expected_functions_list = ['bootstrap_post_set_up', 'bootstrap_initialise', 'bootstrap_completion',
-                               'config_screen_changed', 'theme_change_global']
+                               'config_screen_changed', 'theme_change_global', 'theme_change_service']
     assert list(Registry().service_list.keys()) == expected_service_list, \
         'The service list should have been {}'.format(Registry().service_list.keys())
     assert list(Registry().functions_list.keys()) == expected_functions_list, \
