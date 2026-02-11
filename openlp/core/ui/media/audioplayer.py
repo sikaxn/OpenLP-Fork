@@ -28,7 +28,7 @@ from openlp.core.common.mixins import LogMixin
 from openlp.core.common.registry import Registry
 from openlp.core.display.window import DisplayWindow
 from openlp.core.ui.slidecontroller import SlideController
-from openlp.core.ui.media import MediaType
+from openlp.core.ui.media import MediaType, saved_looping_playback
 from openlp.core.ui.media.mediabase import MediaBase
 
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
@@ -52,6 +52,7 @@ class AudioPlayer(MediaBase, LogMixin):
         self._debug_last_second = -1
         self._lrc_timestamps = []
         self._lrc_current_index = -1
+        self._loop_restart_guard = False
 
     def setup(self, controller: SlideController, display: DisplayWindow) -> None:
         """
@@ -93,6 +94,14 @@ class AudioPlayer(MediaBase, LogMixin):
             if target_slide != self._lrc_current_index:
                 self.controller.on_slide_selected_index([target_slide])
                 self._lrc_current_index = target_slide
+        if self._is_loop_enabled():
+            duration = int(self.media_player.duration())
+            if duration > 0 and int(position) >= max(0, duration - 120):
+                if not self._loop_restart_guard:
+                    self._loop_restart_guard = True
+                    self._restart_loop_playback()
+            else:
+                self._loop_restart_guard = False
 
     def media_status_changed_event(self, event):
         """
@@ -101,6 +110,9 @@ class AudioPlayer(MediaBase, LogMixin):
         if self.controller.media_play_item.media_type not in [MediaType.Audio, MediaType.Dual]:
             return
         if event == QMediaPlayer.MediaStatus.EndOfMedia:
+            if self._is_loop_enabled():
+                self._restart_loop_playback()
+                return
             if self.controller.is_live and self._lrc_timestamps:
                 self.controller.on_slide_selected_index([0])
                 self._lrc_current_index = 0
@@ -108,6 +120,39 @@ class AudioPlayer(MediaBase, LogMixin):
                 Registry().get("media_controller").live_media_status_changed.emit()
             else:
                 Registry().get("media_controller").preview_media_status_changed.emit()
+            self._loop_restart_guard = False
+
+    def _is_loop_enabled(self) -> bool:
+        """
+        Determine loop state using settings and, as fallback, the media toolbar action state.
+        """
+        try:
+            if saved_looping_playback(self.controller):
+                return True
+        except AttributeError:
+            # Unit tests or early startup may not have "settings" registered yet.
+            pass
+        mediabar = getattr(self.controller, 'mediabar', None)
+        actions_map = getattr(mediabar, 'actions_map', {}) if mediabar else {}
+        if not isinstance(actions_map, dict):
+            return False
+        loop_action = actions_map.get('playbackLoop')
+        if isinstance(loop_action, bool):
+            return loop_action
+        if loop_action and hasattr(loop_action, 'isChecked'):
+            checked = loop_action.isChecked()
+            return checked if isinstance(checked, bool) else False
+        return False
+
+    def _restart_loop_playback(self) -> None:
+        """
+        Force restart from start for loop playback.
+        """
+        self.media_player.setPosition(0)
+        self.media_player.play()
+        if self.controller.is_live and self._lrc_timestamps:
+            self.controller.on_slide_selected_index([0])
+            self._lrc_current_index = 0
 
     def load(self) -> bool:
         """
@@ -120,6 +165,7 @@ class AudioPlayer(MediaBase, LogMixin):
         self.log_debug("load audio in Audio Player")
         self._lrc_timestamps = []
         self._lrc_current_index = -1
+        self._loop_restart_guard = False
         # The media player moved here to clear the playlist between uses.
         if self.controller.media_play_item.audio_file:
             service_item = getattr(self.controller, 'service_item', None)
@@ -140,6 +186,7 @@ class AudioPlayer(MediaBase, LogMixin):
         Play the current loaded audio item
         :return:
         """
+        self._loop_restart_guard = False
         self.media_player.play()
 
     def pause(self) -> None:
@@ -159,6 +206,18 @@ class AudioPlayer(MediaBase, LogMixin):
         :return:
         """
         self.media_player.stop()
+        self._loop_restart_guard = False
         if self.controller.is_live and self._lrc_timestamps:
             self.controller.on_slide_selected_index([0])
             self._lrc_current_index = 0
+
+    def toggle_loop(self, loop_required: bool) -> None:
+        """
+        Switch the loop toggle setting for audio playback.
+
+        :param loop_required: Should the current audio repeat indefinitely.
+        """
+        if loop_required:
+            self.media_player.setLoops(QMediaPlayer.Loops.Infinite)
+        else:
+            self.media_player.setLoops(QMediaPlayer.Loops.Once)

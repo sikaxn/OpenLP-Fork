@@ -35,7 +35,7 @@ from openlp.core.state import State
 from openlp.core.ui import DisplayControllerType, HideMode
 from openlp.core.ui.slidecontroller import SlideController
 from openlp.core.ui.media import MediaState, MediaPlayItem, MediaType, format_play_seconds, \
-    format_play_time, parse_stream_path, get_volume, toggle_looping_playback, saved_looping_playback, save_volume, \
+    format_play_time, parse_stream_path, get_volume, saved_looping_playback, save_volume, \
     media_state
 from openlp.core.ui.media.remote import register_views
 from openlp.core.ui.media.mediainfo import media_info
@@ -446,11 +446,17 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         if controller.media_play_item.is_theme_background:
             loop_set = False
             loop_disabled = True
-            controller.media_player.toggle_loop(True)
+            if controller.media_play_item.media_type in [MediaType.Audio, MediaType.Dual]:
+                controller.audio_player.toggle_loop(True)
+            else:
+                controller.media_player.toggle_loop(True)
         else:
             loop_set = saved_looping_playback(controller)
             loop_disabled = False
-            controller.media_player.toggle_loop(loop_set)
+            if controller.media_play_item.media_type in [MediaType.Audio, MediaType.Dual]:
+                controller.audio_player.toggle_loop(loop_set)
+            else:
+                controller.media_player.toggle_loop(loop_set)
         controller.mediabar.seek_slider.setTickInterval(controller.media_play_item.length // 10)
         controller.mediabar.seek_slider.setMaximum(controller.media_play_item.length)
         if mode == "load":
@@ -531,16 +537,25 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
 
         :param msg: First element is the controller which should be used
         """
-        self.media_loop(msg[0])
+        loop_checked = None
+        if len(msg) > 1 and isinstance(msg[1], tuple) and len(msg[1]) > 0 and isinstance(msg[1][0], bool):
+            loop_checked = msg[1][0]
+        self.media_loop(msg[0], loop_checked)
 
-    def media_loop(self, controller: SlideController) -> None:
+    def media_loop(self, controller: SlideController, loop_checked: bool | None = None) -> None:
         """
         Responds to the request to loop a loaded video
 
         :param controller: The controller that needs to be stopped
+        :param loop_checked: Optional explicit checked state from UI signal.
         """
         controller.mediabar.actions_map['playbackLoop'].blockSignals(True)
-        toggle_looping_playback(controller)
+        if loop_checked is None:
+            loop_checked = controller.mediabar.actions_map['playbackLoop'].isChecked()
+        if controller.is_live:
+            self.settings.setValue('media/live loop', loop_checked)
+        else:
+            self.settings.setValue('media/preview loop', loop_checked)
         if controller.media_play_item.media_type in [MediaType.Audio, MediaType.Dual]:
             controller.audio_player.toggle_loop(saved_looping_playback(controller))
         else:
