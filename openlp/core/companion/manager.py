@@ -422,6 +422,7 @@ class CompanionAutoTriggerEditForm(QtWidgets.QDialog):
             )
             return
         trigger_id = self.trigger_data.get('id') if self.trigger_data else str(uuid.uuid4())
+        enabled_value = self.trigger_data.get('enabled', True) if self.trigger_data else True
         self.trigger_data = {
             'id': trigger_id,
             'name': name,
@@ -429,6 +430,7 @@ class CompanionAutoTriggerEditForm(QtWidgets.QDialog):
             'mode': self.type_combo.currentData(),
             'item_ref': item_ref,
             'item_id': item_id,
+            'enabled': enabled_value,
             'slide_row': int(self.slide_spin.value())
         }
         super().accept()
@@ -447,6 +449,7 @@ class CompanionManager(QtWidgets.QWidget):
         self.default_companion_id = ''
         self.autotrigger_enabled = True
         self.filter_current_live_triggers = False
+        self.autotrigger_status_filter = 'all'
         self.follow_service_reorder_enabled = True
         self.connections = {}
         self.network_manager = QtNetwork.QNetworkAccessManager(self)
@@ -535,14 +538,20 @@ class CompanionManager(QtWidgets.QWidget):
         self.auto_trigger_layout = QtWidgets.QVBoxLayout(self.auto_trigger_group_box)
         self.auto_trigger_actions_layout = QtWidgets.QHBoxLayout()
         self.autotrigger_add_button = QtWidgets.QPushButton(UiIcons().new,
-                                                            translate('OpenLP.CompanionManager', 'Add'))
+                                                            '')
+        self.autotrigger_add_button.setToolTip(translate('OpenLP.CompanionManager', 'Add Auto Trigger'))
         self.autotrigger_add_button.clicked.connect(self.on_add_autotrigger)
         self.autotrigger_edit_button = QtWidgets.QPushButton(UiIcons().edit,
-                                                             translate('OpenLP.CompanionManager', 'Edit'))
+                                                             '')
+        self.autotrigger_edit_button.setToolTip(translate('OpenLP.CompanionManager', 'Edit Auto Trigger'))
         self.autotrigger_edit_button.clicked.connect(self.on_edit_autotrigger)
         self.autotrigger_delete_button = QtWidgets.QPushButton(UiIcons().delete,
-                                                               translate('OpenLP.CompanionManager', 'Delete'))
+                                                               '')
+        self.autotrigger_delete_button.setToolTip(translate('OpenLP.CompanionManager', 'Delete Auto Trigger'))
         self.autotrigger_delete_button.clicked.connect(self.on_delete_autotrigger)
+        self.autotrigger_item_toggle_button = QtWidgets.QPushButton(
+            self.auto_trigger_group_box)
+        self.autotrigger_item_toggle_button.clicked.connect(self.on_toggle_selected_autotrigger_enabled)
         self.autotrigger_toggle_button = QtWidgets.QPushButton(self.auto_trigger_group_box)
         self.autotrigger_toggle_button.clicked.connect(self.on_toggle_autotrigger_enabled)
         self.autotrigger_toggle_button.setCheckable(True)
@@ -550,14 +559,17 @@ class CompanionManager(QtWidgets.QWidget):
             translate('OpenLP.CompanionManager', 'Filter Current Live'), self.auto_trigger_group_box)
         self.autotrigger_filter_live_button.setCheckable(True)
         self.autotrigger_filter_live_button.clicked.connect(self.on_toggle_autotrigger_filter_live)
+        self.autotrigger_status_filter_button = QtWidgets.QPushButton(self.auto_trigger_group_box)
+        self.autotrigger_status_filter_button.clicked.connect(self.on_cycle_autotrigger_status_filter)
         self.autotrigger_follow_reorder_button = QtWidgets.QPushButton(
             translate('OpenLP.CompanionManager', 'Follow Service Reorder'), self.auto_trigger_group_box)
         self.autotrigger_follow_reorder_button.setCheckable(True)
         self.autotrigger_follow_reorder_button.clicked.connect(self.on_toggle_follow_service_reorder)
-        for button in [self.autotrigger_add_button, self.autotrigger_edit_button, self.autotrigger_delete_button]:
+        for button in [self.autotrigger_add_button, self.autotrigger_edit_button, self.autotrigger_delete_button,
+                       self.autotrigger_item_toggle_button]:
             self.auto_trigger_actions_layout.addWidget(button)
-        self.auto_trigger_actions_layout.addWidget(self.autotrigger_toggle_button)
         self.auto_trigger_actions_layout.addWidget(self.autotrigger_filter_live_button)
+        self.auto_trigger_actions_layout.addWidget(self.autotrigger_status_filter_button)
         self.auto_trigger_actions_layout.addWidget(self.autotrigger_follow_reorder_button)
         self.auto_trigger_layout.addLayout(self.auto_trigger_actions_layout)
         self.auto_trigger_list_widget = QtWidgets.QListWidget(self.auto_trigger_group_box)
@@ -565,6 +577,10 @@ class CompanionManager(QtWidgets.QWidget):
         self.auto_trigger_list_widget.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.auto_trigger_list_widget.itemDoubleClicked.connect(self.on_edit_autotrigger)
         self.auto_trigger_layout.addWidget(self.auto_trigger_list_widget)
+        self.autotrigger_toggle_button.setMinimumHeight(42)
+        self.autotrigger_toggle_button.setSizePolicy(QtWidgets.QSizePolicy.Policy.Expanding,
+                                                     QtWidgets.QSizePolicy.Policy.Fixed)
+        self.auto_trigger_layout.addWidget(self.autotrigger_toggle_button)
         self.layout.addWidget(self.auto_trigger_group_box, 1)
 
         self.companion_list_widget.currentItemChanged.connect(self.on_companion_selected)
@@ -616,6 +632,8 @@ class CompanionManager(QtWidgets.QWidget):
             for trigger in companion.get('autotriggers', []):
                 if 'item_ref' not in trigger:
                     trigger['item_ref'] = ''
+                if 'enabled' not in trigger:
+                    trigger['enabled'] = True
                 if not trigger.get('item_ref') and trigger.get('item_id'):
                     trigger['item_ref'] = self._resolve_item_ref_from_legacy_id(str(trigger.get('item_id')))
             companion_id = companion['id']
@@ -736,6 +754,7 @@ class CompanionManager(QtWidgets.QWidget):
                 continue
             item = QtWidgets.QListWidgetItem(self._format_autotrigger_text(trigger))
             item.setData(QtCore.Qt.ItemDataRole.UserRole, trigger.get('id'))
+            self._style_autotrigger_item(item, trigger)
             self.auto_trigger_list_widget.addItem(item)
         if self.auto_trigger_list_widget.count():
             self.auto_trigger_list_widget.setCurrentRow(0)
@@ -756,10 +775,23 @@ class CompanionManager(QtWidgets.QWidget):
                 if trigger and self._should_show_autotrigger(trigger):
                     item.setHidden(False)
                     item.setText(self._format_autotrigger_text(trigger))
+                    self._style_autotrigger_item(item, trigger)
                 else:
                     item.setHidden(True)
         finally:
             self.auto_trigger_list_widget.blockSignals(False)
+
+    @staticmethod
+    def _is_trigger_enabled(trigger):
+        value = trigger.get('enabled', True)
+        if isinstance(value, str):
+            return value.strip().lower() in ('1', 'true', 'yes', 'on')
+        return bool(value)
+
+    def _style_autotrigger_item(self, list_item, trigger):
+        font = list_item.font()
+        font.setStrikeOut(not self._is_trigger_enabled(trigger))
+        list_item.setFont(font)
 
     def _select_autotrigger_for_live_slide(self):
         companion = self._get_selected_companion()
@@ -792,6 +824,11 @@ class CompanionManager(QtWidgets.QWidget):
             self.auto_trigger_list_widget.setCurrentRow(matched_row)
 
     def _should_show_autotrigger(self, trigger):
+        trigger_enabled = self._is_trigger_enabled(trigger)
+        if self.autotrigger_status_filter == 'enabled' and not trigger_enabled:
+            return False
+        if self.autotrigger_status_filter == 'disabled' and trigger_enabled:
+            return False
         if not self.filter_current_live_triggers:
             return True
         current_key = self._current_live_slide_key()
@@ -880,9 +917,20 @@ class CompanionManager(QtWidgets.QWidget):
         self.autotrigger_add_button.setEnabled(has_companion and has_button)
         self.autotrigger_edit_button.setEnabled(has_autotrigger)
         self.autotrigger_delete_button.setEnabled(has_autotrigger)
+        self.autotrigger_item_toggle_button.setEnabled(has_autotrigger)
         self.autotrigger_toggle_button.setEnabled(True)
         self.autotrigger_filter_live_button.setEnabled(True)
+        self.autotrigger_status_filter_button.setEnabled(True)
         self.autotrigger_follow_reorder_button.setEnabled(True)
+        trigger = self._get_selected_autotrigger()
+        if trigger and self._is_trigger_enabled(trigger):
+            self.autotrigger_item_toggle_button.setText(translate('OpenLP.CompanionManager', 'Disable'))
+            self.autotrigger_item_toggle_button.setStyleSheet(
+                'QPushButton { background-color: #C62828; color: white; }')
+        else:
+            self.autotrigger_item_toggle_button.setText(translate('OpenLP.CompanionManager', 'Enable'))
+            self.autotrigger_item_toggle_button.setStyleSheet(
+                'QPushButton { background-color: #2E7D32; color: white; }')
         self._update_button_colours()
 
     def _update_button_colours(self):
@@ -900,11 +948,15 @@ class CompanionManager(QtWidgets.QWidget):
 
     def _update_toggle_button_texts(self):
         if self.filter_current_live_triggers:
-            self.autotrigger_filter_live_button.setText(translate('OpenLP.CompanionManager', 'Show All'))
+            self.autotrigger_filter_live_button.setText(translate('OpenLP.CompanionManager', 'Filter: Current Live'))
             self.autotrigger_filter_live_button.setChecked(True)
+            self.autotrigger_filter_live_button.setStyleSheet(
+                'QPushButton { background-color: #2E7D32; color: white; }')
         else:
-            self.autotrigger_filter_live_button.setText(translate('OpenLP.CompanionManager', 'Filter Current Live'))
+            self.autotrigger_filter_live_button.setText(translate('OpenLP.CompanionManager', 'Filter: All'))
             self.autotrigger_filter_live_button.setChecked(False)
+            self.autotrigger_filter_live_button.setStyleSheet(
+                'QPushButton { background-color: #1976D2; color: white; }')
         if self.follow_service_reorder_enabled:
             self.autotrigger_follow_reorder_button.setText(translate('OpenLP.CompanionManager',
                                                                      'Follow Reorder: ON'))
@@ -916,6 +968,19 @@ class CompanionManager(QtWidgets.QWidget):
             self.autotrigger_follow_reorder_button.setChecked(False)
             self.autotrigger_follow_reorder_button.setStyleSheet(
                 'QPushButton { background-color: #C62828; color: white; }')
+        self.autotrigger_status_filter_button.setStyleSheet('')
+        if self.autotrigger_status_filter == 'enabled':
+            self.autotrigger_status_filter_button.setText(translate('OpenLP.CompanionManager', 'Filter: Enabled'))
+            self.autotrigger_status_filter_button.setStyleSheet(
+                'QPushButton { background-color: #2E7D32; color: white; }')
+        elif self.autotrigger_status_filter == 'disabled':
+            self.autotrigger_status_filter_button.setText(translate('OpenLP.CompanionManager', 'Filter: Disabled'))
+            self.autotrigger_status_filter_button.setStyleSheet(
+                'QPushButton { background-color: #C62828; color: white; }')
+        else:
+            self.autotrigger_status_filter_button.setText(translate('OpenLP.CompanionManager', 'Filter: All'))
+            self.autotrigger_status_filter_button.setStyleSheet(
+                'QPushButton { background-color: #1976D2; color: white; }')
 
     def on_companion_selected(self, *_args):
         item = self.companion_list_widget.currentItem()
@@ -1242,6 +1307,30 @@ class CompanionManager(QtWidgets.QWidget):
         self.filter_current_live_triggers = bool(self.autotrigger_filter_live_button.isChecked())
         self._update_toggle_button_texts()
         self._refresh_autotrigger_list()
+
+    def on_cycle_autotrigger_status_filter(self):
+        if self.autotrigger_status_filter == 'enabled':
+            self.autotrigger_status_filter = 'disabled'
+        elif self.autotrigger_status_filter == 'disabled':
+            self.autotrigger_status_filter = 'all'
+        else:
+            self.autotrigger_status_filter = 'enabled'
+        self._update_toggle_button_texts()
+        self._refresh_autotrigger_list()
+
+    def on_toggle_selected_autotrigger_enabled(self):
+        companion = self._get_selected_companion()
+        trigger = self._get_selected_autotrigger()
+        if companion is None or trigger is None:
+            return
+        for index, item in enumerate(companion.get('autotriggers', [])):
+            if item.get('id') == trigger.get('id'):
+                companion['autotriggers'][index]['enabled'] = not self._is_trigger_enabled(item)
+                break
+        self._save_companions()
+        self._refresh_autotrigger_list_labels()
+        self._refresh_live_autotrigger_markers()
+        self._update_icons()
 
     def on_toggle_follow_service_reorder(self):
         self.follow_service_reorder_enabled = bool(self.autotrigger_follow_reorder_button.isChecked())
@@ -1582,9 +1671,10 @@ class CompanionManager(QtWidgets.QWidget):
                     continue
                 button = buttons_by_id.get(trigger.get('button_id'))
                 button_name = str(button.get('name')) if button else translate('OpenLP.CompanionManager', 'Unknown')
-                markers_by_row.setdefault(row, [])
-                if button_name not in markers_by_row[row]:
-                    markers_by_row[row].append(button_name)
+                markers_by_row.setdefault(row, {'enabled': [], 'disabled': []})
+                marker_group = 'enabled' if self._is_trigger_enabled(trigger) else 'disabled'
+                if button_name not in markers_by_row[row][marker_group]:
+                    markers_by_row[row][marker_group].append(button_name)
         return markers_by_row
 
     def _refresh_live_autotrigger_markers(self):
@@ -1604,6 +1694,8 @@ class CompanionManager(QtWidgets.QWidget):
             buttons_by_id = {button.get('id'): button for button in companion.get('buttons', [])}
             for trigger in companion.get('autotriggers', []):
                 if not self._trigger_matches_item(trigger, item_ref, item_id):
+                    continue
+                if not self._is_trigger_enabled(trigger):
                     continue
                 if int(trigger.get('slide_row', -1)) != int(slide_row):
                     continue

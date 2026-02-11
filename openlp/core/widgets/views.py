@@ -274,13 +274,24 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
                     continue
                 if row < 0:
                     continue
-                labels = []
+                marker_payload = {'enabled': [], 'disabled': []}
                 if isinstance(value, str):
-                    labels = [value] if value else []
+                    marker_payload['enabled'] = [value] if value else []
                 elif isinstance(value, (list, tuple, set)):
-                    labels = [str(item) for item in value if item]
-                if labels:
-                    normalized[row] = labels
+                    marker_payload['enabled'] = [str(item) for item in value if item]
+                elif isinstance(value, dict):
+                    enabled_values = value.get('enabled', [])
+                    disabled_values = value.get('disabled', [])
+                    if isinstance(enabled_values, str):
+                        marker_payload['enabled'] = [enabled_values] if enabled_values else []
+                    elif isinstance(enabled_values, (list, tuple, set)):
+                        marker_payload['enabled'] = [str(item) for item in enabled_values if item]
+                    if isinstance(disabled_values, str):
+                        marker_payload['disabled'] = [disabled_values] if disabled_values else []
+                    elif isinstance(disabled_values, (list, tuple, set)):
+                        marker_payload['disabled'] = [str(item) for item in disabled_values if item]
+                if marker_payload['enabled'] or marker_payload['disabled']:
+                    normalized[row] = marker_payload
         self.row_markers = normalized
         self._apply_row_markers()
 
@@ -292,26 +303,46 @@ class ListPreviewWidget(QtWidgets.QTableWidget, RegistryProperties):
         self._apply_row_markers()
 
     def _apply_row_markers(self):
-        marker_background = QtGui.QColor('#FFF3CD')
-        marker_foreground = QtGui.QColor('#4E342E')
+        marker_background_enabled = QtGui.QColor('#FFF3CD')
+        marker_foreground_enabled = QtGui.QColor('#4E342E')
+        marker_background_disabled = QtGui.QColor('#E0E0E0')
+        marker_foreground_disabled = QtGui.QColor('#37474F')
         for row in range(self.slide_count()):
             item = self.item(row, 0)
             if item is None:
                 continue
-            markers = self.row_markers.get(row, [])
-            if markers:
-                marker_text = ', '.join(markers)
+            marker_payload = self.row_markers.get(row, {'enabled': [], 'disabled': []})
+            enabled_markers = marker_payload.get('enabled', [])
+            disabled_markers = marker_payload.get('disabled', [])
+            if enabled_markers or disabled_markers:
+                suffixes = []
+                if enabled_markers:
+                    suffixes.append('[Auto: {markers}]'.format(markers=', '.join(enabled_markers)))
+                if disabled_markers:
+                    suffixes.append('[Auto disabled: {markers}]'.format(markers=', '.join(disabled_markers)))
+                marker_suffix = '  '.join(suffixes)
                 if self.service_item.is_text():
                     base_text_data = item.data(self._base_text_role)
                     base_text = item.text() if base_text_data is None else str(base_text_data)
-                    item.setText('{base}  [Auto: {markers}]'.format(base=base_text, markers=marker_text))
-                item.setToolTip('Auto trigger: {markers}'.format(markers=marker_text))
+                    item.setText('{base}  {suffix}'.format(base=base_text, suffix=marker_suffix))
+                tooltip_text = []
+                if enabled_markers:
+                    tooltip_text.append('Auto trigger: {markers}'.format(markers=', '.join(enabled_markers)))
+                if disabled_markers:
+                    tooltip_text.append('Auto trigger disabled: {markers}'.format(markers=', '.join(disabled_markers)))
+                item.setToolTip('\n'.join(tooltip_text))
                 widget = self.cellWidget(row, 0)
                 if self.row_marker_colours_enabled:
-                    item.setBackground(QtGui.QBrush(marker_background))
-                    item.setForeground(QtGui.QBrush(marker_foreground))
-                    if widget:
-                        widget.setStyleSheet('background-color: #FFF3CD;')
+                    if enabled_markers:
+                        item.setBackground(QtGui.QBrush(marker_background_enabled))
+                        item.setForeground(QtGui.QBrush(marker_foreground_enabled))
+                        if widget:
+                            widget.setStyleSheet('background-color: #FFF3CD;')
+                    else:
+                        item.setBackground(QtGui.QBrush(marker_background_disabled))
+                        item.setForeground(QtGui.QBrush(marker_foreground_disabled))
+                        if widget:
+                            widget.setStyleSheet('background-color: #E0E0E0;')
                 else:
                     item.setBackground(QtGui.QBrush(QtCore.Qt.GlobalColor.transparent))
                     item.setForeground(QtGui.QBrush())
