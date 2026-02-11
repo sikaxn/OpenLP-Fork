@@ -339,6 +339,12 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             'companions': [],
             'default_companion_id': ''
         }
+        self.autoplayer_config = {
+            'playlists': [],
+            'selected_playlist_id': '',
+            'auto_advance_seconds': 5,
+            'loop': False
+        }
         # repaint_service_list debouncer
         self.repaint_service_list_timer = QtCore.QTimer(self)
         self.repaint_service_list_timer.setInterval(100)
@@ -369,6 +375,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         Registry().register_function('mediaitem_suffix_reset', self.reset_supported_suffixes)
         Registry().register_function('service_get_companion_config', self.get_companion_config)
         Registry().register_function('service_set_companion_config', self.set_companion_config)
+        Registry().register_function('service_get_autoplayer_config', self.get_autoplayer_config)
+        Registry().register_function('service_set_autoplayer_config', self.set_autoplayer_config)
 
     def bootstrap_post_set_up(self):
         """
@@ -571,6 +579,12 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             'companions': [],
             'default_companion_id': ''
         }
+        self.autoplayer_config = {
+            'playlists': [],
+            'selected_playlist_id': '',
+            'auto_advance_seconds': 5,
+            'loop': False
+        }
         self.service_id += 1
         self.set_modified(False)
         self.settings.setValue('servicemanager/last file', None)
@@ -594,7 +608,8 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
             'lite-service': self._save_lite,
             'service-theme': self.service_theme,
             'openlp-servicefile-version': 3,
-            'companion': self.companion_config
+            'companion': self.companion_config,
+            'autoplayer': self.autoplayer_config
         }
         service.append({'openlp_core': core})
         return service
@@ -619,6 +634,31 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
         }
         if cleaned != self.companion_config:
             self.companion_config = cleaned
+            if modified:
+                self.set_modified()
+
+    def get_autoplayer_config(self):
+        """
+        Return autoplayer config stored in the current service payload.
+        """
+        return copy.deepcopy(self.autoplayer_config)
+
+    def set_autoplayer_config(self, config, modified=True):
+        """
+        Update autoplayer config for the current service payload.
+
+        :param config: Dictionary of autoplayer config
+        :param modified: Mark service as modified when config changes
+        """
+        config = config if isinstance(config, dict) else {}
+        cleaned = {
+            'playlists': config.get('playlists', []),
+            'selected_playlist_id': config.get('selected_playlist_id', ''),
+            'auto_advance_seconds': int(config.get('auto_advance_seconds', 5) or 5),
+            'loop': bool(config.get('loop', False))
+        }
+        if cleaned != self.autoplayer_config:
+            self.autoplayer_config = cleaned
             if modified:
                 self.set_modified()
 
@@ -937,6 +977,12 @@ class ServiceManager(QtWidgets.QWidget, RegistryBase, Ui_ServiceManager, LogMixi
                 self.companion_config = item.get('companion', {
                     'companions': [],
                     'default_companion_id': ''
+                })
+                self.autoplayer_config = item.get('autoplayer', {
+                    'playlists': [],
+                    'selected_playlist_id': '',
+                    'auto_advance_seconds': 5,
+                    'loop': False
                 })
                 if theme := item.get('service-theme', None):
                     find_and_set_in_combo_box(self.theme_combo_box, theme, set_missing=False)

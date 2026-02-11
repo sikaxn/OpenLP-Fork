@@ -47,6 +47,7 @@ from openlp.core.common.settings import Settings
 from openlp.core.display.screens import ScreenList
 from openlp.core.lib.plugin import PluginStatus
 from openlp.core.lib.ui import create_action
+from openlp.core.autoplayer.manager import AutoplayerManager
 from openlp.core.companion.manager import CompanionManager
 from openlp.core.projectors.manager import ProjectorManager
 from openlp.core.state import State
@@ -178,6 +179,15 @@ class Ui_MainWindow(object):
         self.companion_manager_dock.setWidget(self.companion_manager_contents)
         self.companion_manager_dock.setVisible(False)
         main_window.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.companion_manager_dock)
+        # Create the autoplayer manager
+        self.autoplayer_manager_dock = OpenLPDockWidget(parent=main_window,
+                                                        name='autoplayer_manager_dock',
+                                                        icon=UiIcons().player)
+        self.autoplayer_manager_contents = AutoplayerManager(self.autoplayer_manager_dock)
+        self.autoplayer_manager_contents.setObjectName('autoplayer_manager_contents')
+        self.autoplayer_manager_dock.setWidget(self.autoplayer_manager_contents)
+        self.autoplayer_manager_dock.setVisible(False)
+        main_window.addDockWidget(QtCore.Qt.DockWidgetArea.RightDockWidgetArea, self.autoplayer_manager_dock)
         # Create the menu items
         action_list = ActionList.get_instance()
         action_list.add_category(UiStrings().File, CategoryOrder.standard_menu)
@@ -226,6 +236,12 @@ class Ui_MainWindow(object):
                                                          can_shortcuts=True,
                                                          category=UiStrings().View,
                                                          triggers=self.toggle_companion_manager)
+        self.view_autoplayer_manager_item = create_action(main_window, 'viewAutoplayerManagerItem',
+                                                          icon=UiIcons().player,
+                                                          checked=self.autoplayer_manager_dock.isVisible(),
+                                                          can_shortcuts=True,
+                                                          category=UiStrings().View,
+                                                          triggers=self.toggle_autoplayer_manager)
         self.view_media_manager_item = create_action(main_window, 'viewMediaManagerItem',
                                                      icon=UiIcons().box,
                                                      checked=self.media_manager_dock.isVisible(),
@@ -338,7 +354,8 @@ class Ui_MainWindow(object):
                     self.print_service_order_item, self.file_exit_item))
         add_actions(self.view_mode_menu, (self.mode_default_item, self.mode_setup_item, self.mode_live_item))
         add_actions(self.view_menu, (self.view_mode_menu.menuAction(), None, self.view_media_manager_item,
-                    self.view_projector_manager_item, self.view_companion_manager_item, self.view_service_manager_item,
+                    self.view_projector_manager_item, self.view_companion_manager_item,
+                    self.view_autoplayer_manager_item, self.view_service_manager_item,
                     self.view_theme_manager_item,
                     None, self.view_preview_panel, self.view_live_panel, None, self.lock_panel))
         # i18n add Language Actions
@@ -392,6 +409,7 @@ class Ui_MainWindow(object):
         self.theme_manager_dock.setWindowTitle(translate('OpenLP.MainWindow', 'Themes'))
         self.projector_manager_dock.setWindowTitle(translate('OpenLP.MainWindow', 'Projector Controller'))
         self.companion_manager_dock.setWindowTitle(translate('OpenLP.MainWindow', 'Bitfocus Companion'))
+        self.autoplayer_manager_dock.setWindowTitle(translate('OpenLP.MainWindow', 'Autoplayer'))
         self.file_new_item.setText(translate('OpenLP.MainWindow', '&New Service'))
         self.file_new_item.setToolTip(UiStrings().NewService)
         self.file_new_item.setStatusTip(UiStrings().CreateService)
@@ -432,6 +450,10 @@ class Ui_MainWindow(object):
             translate('OpenLP.MainWindow', 'Hide or show Bitfocus Companion.'))
         self.view_companion_manager_item.setStatusTip(
             translate('OpenLP.MainWindow', 'Toggle visibility of the Bitfocus Companion panel.'))
+        self.view_autoplayer_manager_item.setText(translate('OpenLP.MainWindow', '&Autoplayer'))
+        self.view_autoplayer_manager_item.setToolTip(translate('OpenLP.MainWindow', 'Hide or show Autoplayer.'))
+        self.view_autoplayer_manager_item.setStatusTip(
+            translate('OpenLP.MainWindow', 'Toggle visibility of the Autoplayer panel.'))
         self.view_media_manager_item.setText(translate('OpenLP.MainWindow', 'L&ibrary'))
         self.view_media_manager_item.setToolTip(translate('OpenLP.MainWindow', 'Hide or show the Library.'))
         self.view_media_manager_item.setStatusTip(translate('OpenLP.MainWindow',
@@ -525,6 +547,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.theme_manager_dock.visibilityChanged.connect(self.toggle_theme_manager)
         self.projector_manager_dock.visibilityChanged.connect(self.toggle_projector_manager)
         self.companion_manager_dock.visibilityChanged.connect(self.toggle_companion_manager)
+        self.autoplayer_manager_dock.visibilityChanged.connect(self.toggle_autoplayer_manager)
         self.import_theme_item.triggered.connect(self.theme_manager_contents.on_import_theme)
         self.export_theme_item.triggered.connect(self.theme_manager_contents.on_export_theme)
         self.web_site_item.triggered.connect(self.on_help_web_site_clicked)
@@ -694,14 +717,17 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             if view_mode == 'default':
                 self.set_view_mode(True, True, True, True, True, True)
                 self.companion_manager_dock.setVisible(self.settings.value('user interface/show companion'))
+                self.autoplayer_manager_dock.setVisible(self.settings.value('user interface/show autoplayer'))
                 self.mode_default_item.setChecked(True)
             elif view_mode == 'setup':
                 self.set_view_mode(True, True, False, True, False, True)
                 self.companion_manager_dock.setVisible(self.settings.value('user interface/show companion'))
+                self.autoplayer_manager_dock.setVisible(self.settings.value('user interface/show autoplayer'))
                 self.mode_setup_item.setChecked(True)
             elif view_mode == 'live':
                 self.set_view_mode(False, True, False, False, True, True)
                 self.companion_manager_dock.setVisible(self.settings.value('user interface/show companion'))
+                self.autoplayer_manager_dock.setVisible(self.settings.value('user interface/show autoplayer'))
                 self.mode_live_item.setChecked(True)
         else:
             self.set_view_mode(
@@ -713,6 +739,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
                 self.settings.value('user interface/show projectors')
             )
             self.companion_manager_dock.setVisible(self.settings.value('user interface/show companion'))
+            self.autoplayer_manager_dock.setVisible(self.settings.value('user interface/show autoplayer'))
 
     def first_time(self):
         """
@@ -1023,6 +1050,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         """
         self.set_view_mode(True, True, True, True, True, True, 'default')
         self.companion_manager_dock.setVisible(self.settings.value('user interface/show companion'))
+        self.autoplayer_manager_dock.setVisible(self.settings.value('user interface/show autoplayer'))
         self.settings.setValue('user interface/is preset layout', True)
         self.settings.setValue('projector/show after wizard', True)
 
@@ -1032,6 +1060,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         """
         self.set_view_mode(True, True, False, True, False, True, 'setup')
         self.companion_manager_dock.setVisible(self.settings.value('user interface/show companion'))
+        self.autoplayer_manager_dock.setVisible(self.settings.value('user interface/show autoplayer'))
         self.settings.setValue('user interface/is preset layout', True)
         self.settings.setValue('projector/show after wizard', True)
 
@@ -1041,12 +1070,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         """
         self.set_view_mode(False, True, False, False, True, True, 'live')
         self.companion_manager_dock.setVisible(self.settings.value('user interface/show companion'))
+        self.autoplayer_manager_dock.setVisible(self.settings.value('user interface/show autoplayer'))
         self.settings.setValue('user interface/is preset layout', True)
         self.settings.setValue('projector/show after wizard', True)
 
     def set_view_mode(self, media: bool = True, service: bool = True, theme: bool = True, preview: bool = True,
                       live: bool = True, projector: bool = True, mode: str = '',
-                      companion: bool | None = None) -> None:
+                      companion: bool | None = None, autoplayer: bool | None = None) -> None:
         """
         Set OpenLP to a different view mode.
         """
@@ -1058,6 +1088,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.projector_manager_dock.setVisible(projector)
         if companion is not None:
             self.companion_manager_dock.setVisible(companion)
+        if autoplayer is not None:
+            self.autoplayer_manager_dock.setVisible(autoplayer)
         self.set_preview_panel_visibility(preview)
         self.set_live_panel_visibility(live)
 
@@ -1253,6 +1285,16 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
         self.settings.setValue('user interface/is preset layout', False)
         self.settings.setValue('user interface/show companion', self.companion_manager_dock.isVisible())
 
+    def toggle_autoplayer_manager(self):
+        """
+        Toggle visibility of the Autoplayer manager.
+        """
+        if self.sender() is self.view_autoplayer_manager_item:
+            self.autoplayer_manager_dock.setVisible(not self.autoplayer_manager_dock.isVisible())
+        self.view_autoplayer_manager_item.setChecked(self.autoplayer_manager_dock.isVisible())
+        self.settings.setValue('user interface/is preset layout', False)
+        self.settings.setValue('user interface/show autoplayer', self.autoplayer_manager_dock.isVisible())
+
     def toggle_service_manager(self):
         """
         Toggle the visibility of the service manager
@@ -1297,12 +1339,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self.media_manager_dock.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
             self.projector_manager_dock.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
             self.companion_manager_dock.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
+            self.autoplayer_manager_dock.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.NoDockWidgetFeatures)
             self.view_mode_menu.setEnabled(False)
             self.view_media_manager_item.setEnabled(False)
             self.view_service_manager_item.setEnabled(False)
             self.view_theme_manager_item.setEnabled(False)
             self.view_projector_manager_item.setEnabled(False)
             self.view_companion_manager_item.setEnabled(False)
+            self.view_autoplayer_manager_item.setEnabled(False)
             self.view_preview_panel.setEnabled(False)
             self.view_live_panel.setEnabled(False)
         else:
@@ -1314,12 +1358,14 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow, LogMixin, RegistryPropert
             self.media_manager_dock.setFeatures(all_dock_features)
             self.projector_manager_dock.setFeatures(all_dock_features)
             self.companion_manager_dock.setFeatures(all_dock_features)
+            self.autoplayer_manager_dock.setFeatures(all_dock_features)
             self.view_mode_menu.setEnabled(True)
             self.view_media_manager_item.setEnabled(True)
             self.view_service_manager_item.setEnabled(True)
             self.view_theme_manager_item.setEnabled(True)
             self.view_projector_manager_item.setEnabled(True)
             self.view_companion_manager_item.setEnabled(True)
+            self.view_autoplayer_manager_item.setEnabled(True)
             self.view_preview_panel.setEnabled(True)
             self.view_live_panel.setEnabled(True)
         self.settings.setValue('user interface/lock panel', is_locked)
