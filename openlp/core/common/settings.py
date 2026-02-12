@@ -396,6 +396,7 @@ class Settings(QtCore.QSettings):
         'media/media auto start': QtCore.Qt.CheckState.Unchecked,
         'media/live volume': 50,
         'media/preview volume': 0,
+        'media/audio output device': '__default__',
         'media/live loop': False,
         'media/preview loop': False,
         'media/db type': 'sqlite',

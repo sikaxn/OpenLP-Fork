@@ -23,11 +23,14 @@ The :mod:`~openlp.core.ui.media` module contains classes and objects for media p
 """
 import logging
 
-from PySide6.QtMultimedia import QMediaFormat
+from PySide6.QtMultimedia import QAudioDevice, QMediaDevices, QMediaFormat
 
 from openlp.core.common.registry import Registry
 
 log = logging.getLogger(__name__ + '.__init__')
+
+AUDIO_OUTPUT_DEVICE_DEFAULT = '__default__'
+AUDIO_OUTPUT_DEVICE_NONE = '__none__'
 
 
 def get_supported_media_suffix() -> tuple[list, list]:
@@ -43,6 +46,30 @@ def get_supported_media_suffix() -> tuple[list, list]:
         else:
             a_suffixes += [f'*.{s}' for s in mime_type.suffixes()]
     return a_suffixes, v_suffixes
+
+
+def encode_audio_device_id(device: QAudioDevice) -> str:
+    """
+    Convert a QAudioDevice ID into a stable settings string.
+    """
+    return bytes(device.id()).hex()
+
+
+def get_audio_output_devices() -> list[tuple[str, str]]:
+    """
+    Return available playback devices as ``[(id, description), ...]``.
+    """
+    return [(encode_audio_device_id(device), device.description()) for device in QMediaDevices.audioOutputs()]
+
+
+def get_audio_output_device_by_id(device_id: str) -> QAudioDevice | None:
+    """
+    Resolve a stored device id to an actual QAudioDevice.
+    """
+    for device in QMediaDevices.audioOutputs():
+        if encode_audio_device_id(device) == device_id:
+            return device
+    return None
 
 
 class MediaState(object):

@@ -35,8 +35,8 @@ from openlp.core.state import State
 from openlp.core.ui import DisplayControllerType, HideMode
 from openlp.core.ui.slidecontroller import SlideController
 from openlp.core.ui.media import MediaState, MediaPlayItem, MediaType, format_play_seconds, \
-    format_play_time, parse_stream_path, get_volume, saved_looping_playback, save_volume, \
-    media_state
+    format_play_time, parse_stream_path, get_volume, saved_looping_playback, save_volume, media_state, \
+    AUDIO_OUTPUT_DEVICE_DEFAULT, AUDIO_OUTPUT_DEVICE_NONE, get_audio_output_device_by_id
 from openlp.core.ui.media.remote import register_views
 from openlp.core.ui.media.mediainfo import media_info
 from openlp.core.ui.media.audioplayer import AudioPlayer
@@ -63,6 +63,7 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         """ """
         super(MediaController, self).__init__(parent)
         self.log_info("MediaController Initialising")
+        self._audio_device_unavailable_warning_shown = False
 
     def setup(self):
         # Timer for video state
@@ -119,6 +120,7 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
                     'OpenLP.MediaController', "No Displays have been configured, "
                     "so Live Media has been disabled"))
             self.setup_display(self.preview_controller)
+            self.apply_audio_output_device(check_saved_device=True)
 
     def _display_controllers(self, controller_type: DisplayControllerType) -> SlideController:
         """
@@ -191,6 +193,40 @@ class MediaController(QtWidgets.QWidget, RegistryBase, LogMixin, RegistryPropert
         controller.media_player.setup(controller, self._define_display(controller))
         controller.audio_player = AudioPlayer()
         controller.audio_player.setup(controller, self._define_display(controller))
+
+    def apply_audio_output_device(self, check_saved_device: bool = True) -> None:
+        """
+        Apply configured audio output device to all active players.
+        """
+        if not self.settings:
+            return
+        saved_value = self.settings.value('media/audio output device')
+        mode = 'default'
+        selected_device = None
+        if saved_value == AUDIO_OUTPUT_DEVICE_NONE:
+            mode = 'none'
+        elif saved_value == AUDIO_OUTPUT_DEVICE_DEFAULT:
+            mode = 'default'
+        else:
+            selected_device = get_audio_output_device_by_id(saved_value)
+            if selected_device is None:
+                mode = 'none'
+                if check_saved_device and not self._audio_device_unavailable_warning_shown:
+                    warning_message_box(
+                        translate('OpenLP.MediaController', 'Playback Device Unavailable'),
+                        translate('OpenLP.MediaController',
+                                  'The selected playback device is not available.\n'
+                                  'Audio output is muted until a valid device is selected in Settings.')
+                    )
+                    self._audio_device_unavailable_warning_shown = True
+            else:
+                mode = 'custom'
+        for controller in [getattr(self, 'live_controller', None), getattr(self, 'preview_controller', None)]:
+            if not controller or not getattr(controller, 'media_player', None) or not getattr(controller, 'audio_player', None):
+                continue
+            controller.media_player.set_audio_output_device(mode, selected_device)
+            controller.audio_player.set_audio_output_device(mode, selected_device)
+            self.media_volume(controller, get_volume(controller))
 
     @staticmethod
     def set_controls_visible(controller: SlideController, value: bool) -> None:

@@ -27,7 +27,8 @@ import re
 import sysconfig
 
 from PySide6 import QtCore, QtWidgets
-from PySide6.QtMultimedia import QAudioInput, QAudioOutput, QCamera, QMediaDevices, QMediaCaptureSession, QMediaPlayer
+from PySide6.QtMultimedia import QAudioDevice, QAudioInput, QAudioOutput, QCamera, QMediaDevices, \
+    QMediaCaptureSession, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtCore import QUrl
 
@@ -35,9 +36,11 @@ from openlp.core.common.mixins import LogMixin
 from openlp.core.common.platform import is_win
 from openlp.core.common.registry import Registry
 from openlp.core.display.window import DisplayWindow
+from openlp.core.lib.ui import warning_message_box
 from openlp.core.ui.slidecontroller import SlideController
 from openlp.core.ui.media.mediabase import MediaBase
 from openlp.core.ui.media import MediaType
+from openlp.core.common.i18n import translate
 
 log = logging.getLogger(__name__)
 
@@ -58,6 +61,8 @@ class MediaPlayer(MediaBase, LogMixin):
         """
         super(MediaPlayer, self).__init__(parent, "qt6")
         self.parent = parent
+        self._audio_device_mode = 'default'
+        self._audio_device_error_reported = False
 
     def setup(self, controller: SlideController, display: DisplayWindow) -> None:
         """
@@ -88,6 +93,7 @@ class MediaPlayer(MediaBase, LogMixin):
         self.display = display
         self.media_player.positionChanged.connect(self.position_changed_event)
         self.media_player.mediaStatusChanged.connect(self.media_status_changed_event)
+        self.media_player.errorOccurred.connect(self._on_media_error)
         # device stream objects. setVideoOutput is called when loading stream, video_widget can't be used by both
         # QMediaCaptureSession and QMediaPlayer
         self.media_capture_session = QMediaCaptureSession()
@@ -95,6 +101,37 @@ class MediaPlayer(MediaBase, LogMixin):
         self.device_video_input = None
         self.device_audio_input = None
         self.set_visible(False)  # Hide player till needed
+
+    def set_audio_output_device(self, mode: str, device: QAudioDevice | None = None) -> None:
+        """
+        Apply audio output routing.
+        """
+        self._audio_device_mode = mode
+        self._audio_device_error_reported = False
+        if mode == 'none':
+            self.audio_output.setDevice(QMediaDevices.defaultAudioOutput())
+            self.audio_output.setMuted(True)
+            self.audio_output.setVolume(0.0)
+            return
+        self.audio_output.setMuted(False)
+        if mode == 'default' or device is None:
+            self.audio_output.setDevice(QMediaDevices.defaultAudioOutput())
+        else:
+            self.audio_output.setDevice(device)
+
+    def _on_media_error(self, error, error_string) -> None:
+        """
+        Show one warning when custom output device fails at runtime.
+        """
+        if self._audio_device_mode != 'custom' or self._audio_device_error_reported:
+            return
+        self._audio_device_error_reported = True
+        warning_message_box(
+            translate('OpenLP.MediaPlayer', 'Audio Output Error'),
+            translate('OpenLP.MediaPlayer',
+                      'The selected audio output device failed during playback.\n'
+                      'Please choose another playback device in Settings.')
+        )
 
     def media_status_changed_event(self, event):
         """

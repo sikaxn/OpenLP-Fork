@@ -27,12 +27,14 @@ from bisect import bisect_right
 from openlp.core.common.mixins import LogMixin
 from openlp.core.common.registry import Registry
 from openlp.core.display.window import DisplayWindow
+from openlp.core.lib.ui import warning_message_box
 from openlp.core.ui.slidecontroller import SlideController
 from openlp.core.ui.media import MediaType, saved_looping_playback
 from openlp.core.ui.media.mediabase import MediaBase
 
-from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
+from PySide6.QtMultimedia import QAudioDevice, QMediaPlayer, QAudioOutput, QMediaDevices
 from PySide6.QtCore import QUrl
+from openlp.core.common.i18n import translate
 
 log = logging.getLogger(__name__)
 
@@ -53,6 +55,8 @@ class AudioPlayer(MediaBase, LogMixin):
         self._lrc_timestamps = []
         self._lrc_current_index = -1
         self._loop_restart_guard = False
+        self._audio_device_mode = 'default'
+        self._audio_device_error_reported = False
 
     def setup(self, controller: SlideController, display: DisplayWindow) -> None:
         """
@@ -70,6 +74,38 @@ class AudioPlayer(MediaBase, LogMixin):
         self.display = display
         self.media_player.positionChanged.connect(self.position_changed_event)
         self.media_player.mediaStatusChanged.connect(self.media_status_changed_event)
+        self.media_player.errorOccurred.connect(self._on_media_error)
+
+    def set_audio_output_device(self, mode: str, device: QAudioDevice | None = None) -> None:
+        """
+        Apply audio output routing.
+        """
+        self._audio_device_mode = mode
+        self._audio_device_error_reported = False
+        if mode == 'none':
+            self.audio_output.setDevice(QMediaDevices.defaultAudioOutput())
+            self.audio_output.setMuted(True)
+            self.audio_output.setVolume(0.0)
+            return
+        self.audio_output.setMuted(False)
+        if mode == 'default' or device is None:
+            self.audio_output.setDevice(QMediaDevices.defaultAudioOutput())
+        else:
+            self.audio_output.setDevice(device)
+
+    def _on_media_error(self, error, error_string) -> None:
+        """
+        Show one warning when custom output device fails at runtime.
+        """
+        if self._audio_device_mode != 'custom' or self._audio_device_error_reported:
+            return
+        self._audio_device_error_reported = True
+        warning_message_box(
+            translate('OpenLP.AudioPlayer', 'Audio Output Error'),
+            translate('OpenLP.AudioPlayer',
+                      'The selected audio output device failed during playback.\n'
+                      'Please choose another playback device in Settings.')
+        )
 
     def position_changed_event(self, position) -> None:
         """

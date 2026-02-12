@@ -33,6 +33,7 @@ from openlp.core.common.registry import Registry
 from openlp.core.lib import build_icon
 from openlp.core.projectors.tab import ProjectorTab
 from openlp.core.ui.advancedtab import AdvancedTab
+from openlp.core.ui.audiodevicestab import AudioDevicesTab
 from openlp.core.ui.generaltab import GeneralTab
 from openlp.core.ui.servicetab import ServiceTab
 from openlp.core.ui.screenstab import ScreensTab
@@ -68,6 +69,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         self.projector_tab = None
         self.companion_tab = None
         self.advanced_tab = None
+        self.audio_devices_tab = None
         self.api_tab = None
 
     def exec(self, starting_tab_name=None):
@@ -86,6 +88,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         self.insert_tab(self.screens_tab)
         self.insert_tab(self.themes_tab)
         self.insert_tab(self.player_tab)
+        self.insert_tab(self.audio_devices_tab)
         self.insert_tab(self.projector_tab)
         self.insert_tab(self.companion_tab)
         self.insert_tab(self.api_tab)
@@ -173,6 +176,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
             self.companion_tab = CompanionTab(self)
             self.advanced_tab = AdvancedTab(self)
             self.player_tab = MediaTab(self)
+            self.audio_devices_tab = AudioDevicesTab(self)
             self.api_tab = ApiTab(self)
             self.screens_tab = ScreensTab(self)
         except Exception as e:
@@ -181,6 +185,7 @@ class SettingsForm(QtWidgets.QDialog, Ui_SettingsDialog, RegistryProperties):
         self.themes_tab.post_set_up()
         self.advanced_tab.post_set_up()
         self.player_tab.post_set_up()
+        self.audio_devices_tab.post_set_up()
         self.api_tab.post_set_up()
         for plugin in State().list_plugins():
             if plugin.settings_tab:
