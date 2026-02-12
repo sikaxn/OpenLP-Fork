@@ -15,6 +15,11 @@ Adds automatic playback control for media and service flow, helping operators ru
 
 ![Autoplayer panel](images/autoplayer.png)
 
+### LRC Player
+Adds synchronized lyric playback support using LRC files, making it easier to follow timed lyric lines during songs.
+
+![LRC Player panel](images/lrcplayer.png)
+
 ### MTC and SMPTE
 Adds timecode output support for both MIDI Time Code (MTC) and SMPTE/LTC workflows, including selectable output devices and frame-rate options for external sync with lighting, audio, and show-control systems.
 
