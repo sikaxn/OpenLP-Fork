@@ -31,6 +31,7 @@ log = logging.getLogger(__name__ + '.__init__')
 
 AUDIO_OUTPUT_DEVICE_DEFAULT = '__default__'
 AUDIO_OUTPUT_DEVICE_NONE = '__none__'
+AUDIO_OUTPUT_DEVICE_FOLLOW_PLAYBACK = '__follow_playback__'
 
 
 def get_supported_media_suffix() -> tuple[list, list]:

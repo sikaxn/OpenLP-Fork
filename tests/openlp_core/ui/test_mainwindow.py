@@ -69,6 +69,10 @@ def main_window(state, settings, mocked_qapp):
     mocked_add_toolbar_action.side_effect = _create_mock_action
     renderer_patcher = patch('openlp.core.display.render.Renderer')
     renderer_patcher.start()
+    timecode_manager_patcher = patch('openlp.core.ui.mainwindow.TimecodeManager')
+    mocked_timecode_manager = timecode_manager_patcher.start()
+    mocked_timecode_manager.side_effect = \
+        lambda parent=None: QtWidgets.QWidget(parent if isinstance(parent, QtWidgets.QWidget) else None)
     mocked_screen = MagicMock()
     mocked_screen.geometry.return_value = QtCore.QRect(0, 0, 1024, 768)
     mocked_qapp.screens = MagicMock()
@@ -80,6 +84,7 @@ def main_window(state, settings, mocked_qapp):
     mainwindow.activateWindow = MagicMock()
     yield mainwindow
     del mainwindow
+    timecode_manager_patcher.stop()
     renderer_patcher.stop()
     add_toolbar_action_patcher.stop()
 
@@ -105,6 +110,7 @@ def main_window_reduced(settings, state):
             patch('openlp.core.ui.mainwindow.ServiceManager'), \
             patch('openlp.core.ui.mainwindow.ThemeManager'), \
             patch('openlp.core.ui.mainwindow.ProjectorManager'), \
+            patch('openlp.core.ui.mainwindow.TimecodeManager'), \
             patch('openlp.core.ui.mainwindow.HttpServer'), \
             patch('openlp.core.ui.mainwindow.WebSocketServer'), \
             patch('openlp.core.ui.mainwindow.PluginForm'), \
