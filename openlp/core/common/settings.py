@@ -419,6 +419,8 @@ class Settings(QtCore.QSettings):
         'lrcplayer/db password': '',
         'lrcplayer/db hostname': '',
         'lrcplayer/db database': '',
+        'lrcplayer/end behavior': 'reset_to_start',
+        'lrcplayer/add empty line on import': True,
         'players/background color': '#000000',
         'obs_studio/status': PluginStatus.Inactive,
         'obs_studio/host': 'localhost',

@@ -149,7 +149,7 @@ class AudioPlayer(MediaBase, LogMixin):
             if self._is_loop_enabled():
                 self._restart_loop_playback()
                 return
-            if self.controller.is_live and self._lrc_timestamps:
+            if self.controller.is_live and self._lrc_timestamps and self._should_reset_lrc_to_start_on_done():
                 self.controller.on_slide_selected_index([0])
                 self._lrc_current_index = 0
             if self.controller.is_live:
@@ -189,6 +189,17 @@ class AudioPlayer(MediaBase, LogMixin):
         if self.controller.is_live and self._lrc_timestamps:
             self.controller.on_slide_selected_index([0])
             self._lrc_current_index = 0
+
+    def _should_reset_lrc_to_start_on_done(self) -> bool:
+        """
+        Decide LRC slide position behavior when playback stops naturally or manually.
+        """
+        if not self._lrc_timestamps:
+            return False
+        try:
+            return self.settings.value('lrcplayer/end behavior') != 'stay_on_last'
+        except Exception:
+            return True
 
     def load(self) -> bool:
         """
@@ -243,7 +254,7 @@ class AudioPlayer(MediaBase, LogMixin):
         """
         self.media_player.stop()
         self._loop_restart_guard = False
-        if self.controller.is_live and self._lrc_timestamps:
+        if self.controller.is_live and self._should_reset_lrc_to_start_on_done():
             self.controller.on_slide_selected_index([0])
             self._lrc_current_index = 0
 

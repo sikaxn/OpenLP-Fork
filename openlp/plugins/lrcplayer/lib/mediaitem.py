@@ -240,7 +240,7 @@ class LrcPlayerMediaItem(MediaManagerItem):
             )
             return False
 
-        parsed_lines = self.parse_lrc(lrc_path)
+        parsed_lines = self.parse_lrc(lrc_path, add_empty_start_line=self._should_add_empty_start_line())
         if not parsed_lines:
             critical_error_message_box(
                 translate('LrcPlayerPlugin.MediaItem', 'Invalid LRC File'),
@@ -296,7 +296,9 @@ class LrcPlayerMediaItem(MediaManagerItem):
         if item_id is not None and item_id not in self.lrc_timestamps_by_id:
             song = self.plugin.db_manager.get_object(LrcSong, item_id)
             if song and Path(song.lrc_path).exists():
-                parsed_lines = self.parse_lrc(Path(song.lrc_path))
+                parsed_lines = self.parse_lrc(
+                    Path(song.lrc_path), add_empty_start_line=self._should_add_empty_start_line()
+                )
                 if parsed_lines:
                     parsed_timestamps = [time_ms for (time_ms, _) in parsed_lines]
                     self.lrc_timestamps_by_id[item_id] = parsed_timestamps
@@ -321,7 +323,7 @@ class LrcPlayerMediaItem(MediaManagerItem):
                 song = songs[0]
                 lrc_path = Path(song.lrc_path)
                 if lrc_path.exists():
-                    parsed_lines = self.parse_lrc(lrc_path)
+                    parsed_lines = self.parse_lrc(lrc_path, add_empty_start_line=self._should_add_empty_start_line())
                     timestamps = [time_ms for (time_ms, _) in parsed_lines]
                     self.lrc_timestamps_by_title[song.title.strip().lower()] = timestamps
         if not timestamps and self.last_generated_timestamps:
@@ -411,8 +413,14 @@ class LrcPlayerMediaItem(MediaManagerItem):
         self.media_controller.media_seek(self.live_controller, target_ms)
         self.active_live_slide_index = row
 
+    def _should_add_empty_start_line(self) -> bool:
+        """
+        True when importing/parsing should prepend an empty lyric line at 0:00.
+        """
+        return bool(self.settings.value('lrcplayer/add empty line on import'))
+
     @staticmethod
-    def parse_lrc(path):
+    def parse_lrc(path, add_empty_start_line=True):
         """
         Parse a .lrc file and return [(time_ms, lyric_text), ...] sorted by time.
         """
@@ -464,8 +472,8 @@ class LrcPlayerMediaItem(MediaManagerItem):
                 parsed.append((max(0, total_ms), text))
 
         parsed.sort(key=lambda row: row[0])
-        # Always start with a silent/blank line at 0:00 so lyrics begin from an empty slide.
-        parsed.insert(0, (0, ''))
+        if add_empty_start_line and (not parsed or parsed[0][0] != 0 or parsed[0][1] != ''):
+            parsed.insert(0, (0, ''))
         return parsed
 
     @QtCore.Slot(str, bool, result=list)

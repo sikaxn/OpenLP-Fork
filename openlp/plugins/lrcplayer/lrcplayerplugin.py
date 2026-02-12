@@ -31,6 +31,7 @@ from openlp.core.state import State
 from openlp.core.ui.icons import UiIcons
 from openlp.plugins.lrcplayer.lib.db import init_schema
 from openlp.plugins.lrcplayer.lib.mediaitem import LrcPlayerMediaItem
+from openlp.plugins.lrcplayer.lib.lrcplayertab import LrcPlayerTab
 
 
 log = logging.getLogger(__name__)
@@ -43,7 +44,7 @@ class LrcplayerPlugin(Plugin):
     log.info('LrcPlayer Plugin loaded')
 
     def __init__(self):
-        super().__init__('lrcplayer', LrcPlayerMediaItem)
+        super().__init__('lrcplayer', LrcPlayerMediaItem, LrcPlayerTab)
         self.weight = -4
         self.db_manager = DBManager('lrcplayer', init_schema)
         self.icon_path = UiIcons().music
