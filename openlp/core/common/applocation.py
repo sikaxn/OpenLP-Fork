@@ -37,7 +37,22 @@ from openlp.core.common.registry import Registry
 
 log = logging.getLogger(__name__)
 
-FROZEN_APP_PATH = Path(sys.argv[0]).parent
+
+def _get_frozen_app_path() -> Path:
+    """
+    Resolve application root for frozen builds across PyInstaller layouts.
+    """
+    executable_dir = Path(sys.argv[0]).parent
+    meipass = getattr(sys, '_MEIPASS', None)
+    candidate_dirs = [Path(meipass)] if meipass else []
+    candidate_dirs.append(executable_dir)
+    for candidate in candidate_dirs:
+        if (candidate / 'core').exists():
+            return candidate
+    return candidate_dirs[0] if candidate_dirs else executable_dir
+
+
+FROZEN_APP_PATH = _get_frozen_app_path()
 APP_PATH = Path(openlp.__file__).parent
 
 

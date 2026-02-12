@@ -24,7 +24,9 @@ The :mod:`~openlp.core.ui.media.mediaplayer` module for media playing.
 import logging
 import os
 import re
+import sys
 import sysconfig
+from pathlib import Path
 
 from PySide6 import QtCore, QtWidgets
 from PySide6.QtMultimedia import QAudioDevice, QAudioInput, QAudioOutput, QCamera, QMediaDevices, \
@@ -44,9 +46,50 @@ from openlp.core.common.i18n import translate
 
 log = logging.getLogger(__name__)
 
+
+def _get_pyside6_dll_dirs() -> list[str]:
+    """
+    Build candidate PySide6 directories for os.add_dll_directory().
+    """
+    candidate_dirs = []
+    purelib_path = sysconfig.get_path('purelib')
+    if purelib_path:
+        candidate_dirs.append(Path(purelib_path) / 'PySide6')
+    try:
+        import PySide6
+        candidate_dirs.append(Path(PySide6.__file__).resolve().parent)
+    except (ImportError, OSError, AttributeError):
+        pass
+    if getattr(sys, 'frozen', False):
+        executable_dir = Path(sys.executable).resolve().parent
+        candidate_dirs.extend([
+            executable_dir / 'PySide6',
+            executable_dir / '_internal' / 'PySide6',
+            executable_dir / '_internal' / 'Lib' / 'site-packages' / 'PySide6'
+        ])
+        meipass = getattr(sys, '_MEIPASS', None)
+        if meipass:
+            meipass_path = Path(meipass)
+            candidate_dirs.extend([
+                meipass_path / 'PySide6',
+                meipass_path / 'Lib' / 'site-packages' / 'PySide6'
+            ])
+    unique_paths = set()
+    dll_dirs = []
+    for candidate in candidate_dirs:
+        candidate_str = str(candidate)
+        if candidate_str in unique_paths:
+            continue
+        unique_paths.add(candidate_str)
+        if candidate.is_dir():
+            dll_dirs.append(candidate_str)
+    return dll_dirs
+
+
 # A workaround for https://bugreports.qt.io/browse/PYSIDE-2935
 if is_win():
-    os.add_dll_directory(sysconfig.get_path('purelib') + '/PySide6/')
+    for dll_dir in _get_pyside6_dll_dirs():
+        os.add_dll_directory(dll_dir)
 
 
 class MediaPlayer(MediaBase, LogMixin):
