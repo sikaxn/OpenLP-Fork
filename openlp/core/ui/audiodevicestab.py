@@ -93,6 +93,12 @@ class AudioDevicesTab(SettingsTab):
         self.timecode_mtc_frame_rate_combo_box = QtWidgets.QComboBox(self.audio_device_group_box)
         self.timecode_mtc_frame_rate_combo_box.setObjectName('timecode_mtc_frame_rate_combo_box')
         self.audio_device_layout.addWidget(self.timecode_mtc_frame_rate_combo_box)
+        self.timecode_mtc_idle_behavior_label = QtWidgets.QLabel(self.audio_device_group_box)
+        self.timecode_mtc_idle_behavior_label.setObjectName('timecode_mtc_idle_behavior_label')
+        self.audio_device_layout.addWidget(self.timecode_mtc_idle_behavior_label)
+        self.timecode_mtc_idle_behavior_combo_box = QtWidgets.QComboBox(self.audio_device_group_box)
+        self.timecode_mtc_idle_behavior_combo_box.setObjectName('timecode_mtc_idle_behavior_combo_box')
+        self.audio_device_layout.addWidget(self.timecode_mtc_idle_behavior_combo_box)
         self.timecode_sample_rate_label = QtWidgets.QLabel(self.audio_device_group_box)
         self.timecode_sample_rate_label.setObjectName('timecode_sample_rate_label')
         self.audio_device_layout.addWidget(self.timecode_sample_rate_label)
@@ -119,6 +125,7 @@ class AudioDevicesTab(SettingsTab):
         self.timecode_midi_output_label.setText(translate('OpenLP.AudioDevicesTab', 'Timecode MIDI Output Device'))
         self.timecode_frame_rate_label.setText(translate('OpenLP.AudioDevicesTab', 'Timecode SMPTE/LTC Frame Rate'))
         self.timecode_mtc_frame_rate_label.setText(translate('OpenLP.AudioDevicesTab', 'Timecode MIDI (MTC) Frame Rate'))
+        self.timecode_mtc_idle_behavior_label.setText(translate('OpenLP.AudioDevicesTab', 'Timecode MIDI (MTC) Idle Behavior'))
         self.timecode_sample_rate_label.setText(translate('OpenLP.AudioDevicesTab', 'Timecode Sample Rate'))
         self.timecode_bit_depth_label.setText(translate('OpenLP.AudioDevicesTab', 'Timecode Bit Depth'))
 
@@ -162,6 +169,15 @@ class AudioDevicesTab(SettingsTab):
         self.timecode_mtc_frame_rate_combo_box.clear()
         for fps in [24.0, 25.0, 29.97, 30.0]:
             self.timecode_mtc_frame_rate_combo_box.addItem(f'{fps:g} fps', fps)
+        self.timecode_mtc_idle_behavior_combo_box.clear()
+        self.timecode_mtc_idle_behavior_combo_box.addItem(
+            translate('OpenLP.AudioDevicesTab', 'Keep stream alive (no dark)'),
+            'keep_stream'
+        )
+        self.timecode_mtc_idle_behavior_combo_box.addItem(
+            translate('OpenLP.AudioDevicesTab', 'Allow dark when idle'),
+            'allow_dark'
+        )
         self.timecode_sample_rate_combo_box.clear()
         for sample_rate in [44100, 48000, 96000]:
             self.timecode_sample_rate_combo_box.addItem(f'{sample_rate} Hz', sample_rate)
@@ -210,6 +226,11 @@ class AudioDevicesTab(SettingsTab):
         if mtc_frame_rate_index < 0:
             mtc_frame_rate_index = self._find_approx_data_index(self.timecode_mtc_frame_rate_combo_box, 30.0)
         self.timecode_mtc_frame_rate_combo_box.setCurrentIndex(mtc_frame_rate_index)
+        saved_mtc_idle_behavior = str(self.settings.value('timecode/mtc idle behavior') or 'keep_stream')
+        mtc_idle_behavior_index = self.timecode_mtc_idle_behavior_combo_box.findData(saved_mtc_idle_behavior)
+        if mtc_idle_behavior_index < 0:
+            mtc_idle_behavior_index = self.timecode_mtc_idle_behavior_combo_box.findData('keep_stream')
+        self.timecode_mtc_idle_behavior_combo_box.setCurrentIndex(mtc_idle_behavior_index)
         saved_sample_rate = int(self.settings.value('timecode/sample rate') or 48000)
         sample_rate_index = self.timecode_sample_rate_combo_box.findData(saved_sample_rate)
         if sample_rate_index < 0:
@@ -235,6 +256,7 @@ class AudioDevicesTab(SettingsTab):
         selected_timecode_midi_device = self.timecode_midi_output_combo_box.currentData()
         selected_frame_rate = float(self.timecode_frame_rate_combo_box.currentData())
         selected_mtc_frame_rate = float(self.timecode_mtc_frame_rate_combo_box.currentData())
+        selected_mtc_idle_behavior = str(self.timecode_mtc_idle_behavior_combo_box.currentData())
         selected_sample_rate = int(self.timecode_sample_rate_combo_box.currentData())
         selected_bit_depth = int(self.timecode_bit_depth_combo_box.currentData())
         timecode_changed = False
@@ -250,6 +272,9 @@ class AudioDevicesTab(SettingsTab):
             timecode_changed = True
         if abs(float(self.settings.value('timecode/mtc frame rate') or 30.0) - selected_mtc_frame_rate) > 0.0001:
             self.settings.setValue('timecode/mtc frame rate', selected_mtc_frame_rate)
+            timecode_changed = True
+        if str(self.settings.value('timecode/mtc idle behavior') or 'keep_stream') != selected_mtc_idle_behavior:
+            self.settings.setValue('timecode/mtc idle behavior', selected_mtc_idle_behavior)
             timecode_changed = True
         if int(self.settings.value('timecode/sample rate') or 48000) != selected_sample_rate:
             self.settings.setValue('timecode/sample rate', selected_sample_rate)

@@ -44,6 +44,20 @@ class MIDIIOCAPSW(ctypes.Structure):
     ]
 
 
+class MIDIHDR(ctypes.Structure):
+    _fields_ = [
+        ('lpData', ctypes.c_char_p),
+        ('dwBufferLength', wintypes.DWORD),
+        ('dwBytesRecorded', wintypes.DWORD),
+        ('dwUser', ctypes.c_size_t),
+        ('dwFlags', wintypes.DWORD),
+        ('lpNext', ctypes.c_void_p),
+        ('reserved', ctypes.c_size_t),
+        ('dwOffset', wintypes.DWORD),
+        ('dwReserved', ctypes.c_size_t * 8)
+    ]
+
+
 class WinMMMidiOut:
     """
     Minimal winmm MIDI Out wrapper.
@@ -67,6 +81,12 @@ class WinMMMidiOut:
             self._winmm.midiOutReset.restype = wintypes.UINT
             self._winmm.midiOutClose.argtypes = [wintypes.HANDLE]
             self._winmm.midiOutClose.restype = wintypes.UINT
+            self._winmm.midiOutPrepareHeader.argtypes = [wintypes.HANDLE, ctypes.POINTER(MIDIHDR), wintypes.UINT]
+            self._winmm.midiOutPrepareHeader.restype = wintypes.UINT
+            self._winmm.midiOutLongMsg.argtypes = [wintypes.HANDLE, ctypes.POINTER(MIDIHDR), wintypes.UINT]
+            self._winmm.midiOutLongMsg.restype = wintypes.UINT
+            self._winmm.midiOutUnprepareHeader.argtypes = [wintypes.HANDLE, ctypes.POINTER(MIDIHDR), wintypes.UINT]
+            self._winmm.midiOutUnprepareHeader.restype = wintypes.UINT
         except Exception:
             self._winmm = None
 
@@ -98,6 +118,33 @@ class WinMMMidiOut:
             return
         message = (int(status) & 0xFF) | ((int(data1) & 0xFF) << 8) | ((int(data2) & 0xFF) << 16)
         self._winmm.midiOutShortMsg(self._handle, message)
+
+    def send_sysex(self, payload: bytes, timeout_ms: int = 100) -> bool:
+        """
+        Send one SysEx payload via winmm long message API.
+        """
+        if not self._opened or not self._winmm or not payload:
+            return False
+        data_buffer = ctypes.create_string_buffer(bytes(payload))
+        header = MIDIHDR()
+        header.lpData = ctypes.cast(data_buffer, ctypes.c_char_p)
+        header.dwBufferLength = len(payload)
+        header.dwBytesRecorded = len(payload)
+        prepared = self._winmm.midiOutPrepareHeader(self._handle, ctypes.byref(header), ctypes.sizeof(MIDIHDR))
+        if prepared != 0:
+            return False
+        sent = self._winmm.midiOutLongMsg(self._handle, ctypes.byref(header), ctypes.sizeof(MIDIHDR))
+        if sent != 0:
+            self._winmm.midiOutUnprepareHeader(self._handle, ctypes.byref(header), ctypes.sizeof(MIDIHDR))
+            return False
+        # MHDR_DONE = 0x00000001
+        polls = max(1, int(timeout_ms / 2))
+        for _ in range(polls):
+            if header.dwFlags & 0x00000001:
+                break
+            ctypes.windll.kernel32.Sleep(2)
+        self._winmm.midiOutUnprepareHeader(self._handle, ctypes.byref(header), ctypes.sizeof(MIDIHDR))
+        return True
 
     def close(self) -> None:
         if not self._opened or not self._winmm:

@@ -403,6 +403,7 @@ class Settings(QtCore.QSettings):
         'timecode/fps': 30,
         'timecode/frame rate': 30,
         'timecode/mtc frame rate': 30,
+        'timecode/mtc idle behavior': 'keep_stream',
         'timecode/sample rate': 48000,
         'timecode/bit depth': 16,
         'media/live loop': False,

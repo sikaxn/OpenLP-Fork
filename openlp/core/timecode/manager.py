@@ -51,6 +51,8 @@ TIMECODE_MODE_SYSTEM = 'system_time'
 TIMECODE_MODE_FOLLOW_FREEZE = 'follow_media_freeze'
 
 _TIMECODE_MODES = [TIMECODE_MODE_ZERO, TIMECODE_MODE_FOLLOW, TIMECODE_MODE_SYSTEM, TIMECODE_MODE_FOLLOW_FREEZE]
+MTC_IDLE_KEEP_STREAM = 'keep_stream'
+MTC_IDLE_ALLOW_DARK = 'allow_dark'
 
 log = logging.getLogger(__name__)
 
@@ -399,7 +401,7 @@ class TimecodeManager(QtWidgets.QWidget, RegistryProperties):
         self._mode = TIMECODE_MODE_ZERO
         self._current_frame = 0
         self._current_device_signature = ''
-        self._mtc_sender = MtcMidiOutput(self._mtc_fps)
+        self._mtc_sender = MtcMidiOutput(self._mtc_fps, self._mtc_idle_behavior)
         self._clock = TimecodeClock(self._ltc_fps, self._mtc_fps, self._mtc_sender, self._on_timecode_resync)
         self._clock.start()
         self._ltc_output = LtcAudioOutput(
@@ -476,6 +478,12 @@ class TimecodeManager(QtWidgets.QWidget, RegistryProperties):
         if fps <= 0:
             fps = 30.0
         return fps
+
+    def _mtc_idle_behavior(self) -> str:
+        behavior = str(self.settings.value('timecode/mtc idle behavior') or MTC_IDLE_KEEP_STREAM)
+        if behavior not in [MTC_IDLE_KEEP_STREAM, MTC_IDLE_ALLOW_DARK]:
+            behavior = MTC_IDLE_KEEP_STREAM
+        return behavior
 
     def _nominal_fps(self) -> int:
         fps = self._ltc_fps()
@@ -577,7 +585,11 @@ class TimecodeManager(QtWidgets.QWidget, RegistryProperties):
     def _device_description(self):
         timecode_device = self.settings.value('timecode/audio output device')
         midi_device = str(self.settings.value('timecode/midi output device') or MIDI_OUTPUT_DEVICE_NONE)
-        format_text = f'LTC {self._ltc_fps()} fps, MTC {self._mtc_fps()} fps, {self._sample_rate()} Hz, {self._bit_depth()}-bit'
+        mtc_idle_text = translate('OpenLP.TimecodeManager', 'keep stream') \
+            if self._mtc_idle_behavior() == MTC_IDLE_KEEP_STREAM \
+            else translate('OpenLP.TimecodeManager', 'allow dark')
+        format_text = (f'LTC {self._ltc_fps()} fps, MTC {self._mtc_fps()} fps '
+                       f'({mtc_idle_text}), {self._sample_rate()} Hz, {self._bit_depth()}-bit')
         midi_devices = {device_id: name for device_id, name in get_midi_output_devices()}
         midi_text = translate('OpenLP.TimecodeManager', 'MIDI: Disabled')
         if midi_device != MIDI_OUTPUT_DEVICE_NONE:
@@ -605,7 +617,8 @@ class TimecodeManager(QtWidgets.QWidget, RegistryProperties):
         midi_device = self.settings.value('timecode/midi output device')
         playback_device = self.settings.value('media/audio output device')
         signature = (f'{timecode_device}|{playback_device}|{self._sample_rate()}|'
-                     f'{self._bit_depth()}|{self._ltc_fps()}|{self._mtc_fps()}|{self._nominal_fps()}|{midi_device}')
+                     f'{self._bit_depth()}|{self._ltc_fps()}|{self._mtc_fps()}|{self._mtc_idle_behavior()}|'
+                     f'{self._nominal_fps()}|{midi_device}')
         if signature == self._current_device_signature:
             return
         self._current_device_signature = signature
@@ -644,8 +657,9 @@ class MtcMidiOutput:
     """
     Sends MIDI Time Code quarter-frame messages.
     """
-    def __init__(self, mtc_fps_provider):
+    def __init__(self, mtc_fps_provider, mtc_idle_behavior_provider=None):
         self.mtc_fps_provider = mtc_fps_provider
+        self.mtc_idle_behavior_provider = mtc_idle_behavior_provider or (lambda: MTC_IDLE_KEEP_STREAM)
         self._midi = WinMMMidiOut()
         self._device = MIDI_OUTPUT_DEVICE_NONE
         self._opened = False
@@ -655,6 +669,9 @@ class MtcMidiOutput:
         self._last_source_frame = 0
         self._latched_mtc_frame = 0
         self._has_sent = False
+        self._last_full_frame_t = 0.0
+        self._static_repeat_count = 0
+        self._static_hold = False
 
     def set_device(self, device_id):
         device_id = str(device_id or MIDI_OUTPUT_DEVICE_NONE)
@@ -676,6 +693,9 @@ class MtcMidiOutput:
         self._last_source_frame = 0
         self._latched_mtc_frame = 0
         self._has_sent = False
+        self._last_full_frame_t = 0.0
+        self._static_repeat_count = 0
+        self._static_hold = False
 
     def stop(self):
         self._midi.close()
@@ -683,6 +703,9 @@ class MtcMidiOutput:
         self._qf_index = 0
         self._last_source_frame = 0
         self._has_sent = False
+        self._last_full_frame_t = 0.0
+        self._static_repeat_count = 0
+        self._static_hold = False
 
     @staticmethod
     def _rate_code(fps: int, speed_fps: float) -> int:
@@ -743,6 +766,30 @@ class MtcMidiOutput:
             value = ((rate_code & 0x03) << 1) | ((hours >> 4) & 0x01)
         return ((qf_type & 0x07) << 4) | (value & 0x0F)
 
+    def _send_full_frame(self, frame_number: int, fps: int, speed_fps: float, now: float) -> None:
+        """
+        Send a Full-Frame MTC SysEx packet to hard-lock receivers.
+        """
+        if not hasattr(self._midi, 'send_sysex'):
+            return
+        total_frames_day = 24 * 60 * 60 * max(1, fps)
+        frame_number = max(0, int(frame_number)) % total_frames_day
+        frames = frame_number % fps
+        total_seconds = frame_number // fps
+        seconds = total_seconds % 60
+        total_minutes = total_seconds // 60
+        minutes = total_minutes % 60
+        hours = (total_minutes // 60) % 24
+        rate_code = self._rate_code(fps, speed_fps)
+        hr_byte = ((rate_code & 0x03) << 5) | (hours & 0x1F)
+        # Universal Realtime Full Timecode Message (device id 0x7F = all-call)
+        payload = bytes([0xF0, 0x7F, 0x7F, 0x01, 0x01, hr_byte, minutes & 0x3F, seconds & 0x3F, frames & 0x1F, 0xF7])
+        try:
+            self._midi.send_sysex(payload)
+            self._last_full_frame_t = now
+        except Exception:
+            pass
+
     def update(self, current_frame: int, source_fps: float, mtc_fps=None):
         if not self._opened:
             return
@@ -762,8 +809,9 @@ class MtcMidiOutput:
         # Detect seek/large jump and restart quarter-frame cycle for clean decode.
         source_jump_threshold = max(2, int(source_fps * 0.25))
         mtc_jump_threshold = max(2, int(fps * 0.25))
+        prev_mtc_frame = self._last_frame_sent
         source_jump = abs(current_source_frame - self._last_source_frame) > source_jump_threshold
-        mtc_jump = abs(current_mtc_frame - self._last_frame_sent) > mtc_jump_threshold
+        mtc_jump = abs(current_mtc_frame - prev_mtc_frame) > mtc_jump_threshold
         if self._has_sent and (source_jump or mtc_jump):
             message = (f'[Timecode] mtc resync: source_jump={source_jump} mtc_jump={mtc_jump} '
                        f'source_frame={current_source_frame} mtc_frame={current_mtc_frame}')
@@ -771,6 +819,30 @@ class MtcMidiOutput:
             log.info(message)
             self._qf_index = 0
             self._latched_mtc_frame = current_mtc_frame
+            self._static_hold = False
+            self._send_full_frame(current_mtc_frame, fps, mtc_speed_fps, now)
+
+        if current_mtc_frame == prev_mtc_frame:
+            self._static_repeat_count += 1
+        else:
+            self._static_repeat_count = 0
+
+        allow_dark_on_idle = str(self.mtc_idle_behavior_provider()) == MTC_IDLE_ALLOW_DARK
+        # Keep quarter-frame stream running even when static so desks don't blank.
+        # Increase full-frame pinning cadence in static conditions to reduce wander.
+        if self._static_repeat_count >= 8:
+            self._static_hold = True
+        if self._static_hold and current_mtc_frame != prev_mtc_frame:
+            self._static_hold = False
+            self._qf_index = 0
+        if allow_dark_on_idle and self._static_hold:
+            if (now - self._last_full_frame_t) >= 0.25:
+                self._send_full_frame(current_mtc_frame, fps, mtc_speed_fps, now)
+            self._last_source_frame = current_source_frame
+            self._last_frame_sent = current_mtc_frame
+            self._has_sent = True
+            self._next_send_t = now + interval
+            return
 
         # Keep one full timecode snapshot for all 8 quarter-frame packets.
         if self._qf_index == 0:
@@ -781,6 +853,10 @@ class MtcMidiOutput:
         self._last_source_frame = current_source_frame
         self._last_frame_sent = current_mtc_frame
         self._has_sent = True
+        # Send full-frame periodically; faster while static to prevent receiver free-run drift.
+        full_frame_interval = 0.25 if self._static_hold else 1.0
+        if (now - self._last_full_frame_t) >= full_frame_interval:
+            self._send_full_frame(current_mtc_frame, fps, mtc_speed_fps, now)
         self._next_send_t += interval
         if self._next_send_t < now - interval:
             self._next_send_t = now + interval
